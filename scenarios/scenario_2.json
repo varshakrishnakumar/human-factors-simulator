@@ -1,0 +1,16 @@
+{
+  "scenario_id": 2,
+  "title": "Attitude control instability",
+  "initial_mode": "NOMINAL",
+  "fault": "Attitude controller saturation",
+  "auto_transition": {
+    "time": 8,
+    "new_mode": "SAFE"
+  },
+  "correct_mode": "SAFE",
+  "correct_actions": [
+    "ACK ALARM",
+    "ENTER SAFE MODE",
+    "ISOLATE ACS"
+  ]
+}

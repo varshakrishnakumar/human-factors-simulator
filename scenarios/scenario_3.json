@@ -1,0 +1,16 @@
+{
+  "scenario_id": 3,
+  "title": "Thermal sensor disagreement",
+  "initial_mode": "AUTO_THERMAL",
+  "fault": "Thermal sensor disagreement",
+  "auto_transition": {
+    "time": 12,
+    "new_mode": "HOLD"
+  },
+  "correct_mode": "HOLD",
+  "correct_actions": [
+    "ACK ALARM",
+    "ENTER HOLD MODE",
+    "CYCLE SENSOR BUS"
+  ]
+}

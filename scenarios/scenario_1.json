@@ -1,0 +1,16 @@
+{
+  "scenario_id": 1,
+  "title": "Relative navigation degraded",
+  "initial_mode": "AUTO_APPROACH",
+  "fault": "Relative navigation degraded",
+  "auto_transition": {
+    "time": 10,
+    "new_mode": "HOLD"
+  },
+  "correct_mode": "HOLD",
+  "correct_actions": [
+    "ACK ALARM",
+    "ENTER HOLD MODE",
+    "RESET NAVIGATION"
+  ]
+}
