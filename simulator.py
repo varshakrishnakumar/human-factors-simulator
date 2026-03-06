@@ -3,7 +3,7 @@ import random
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-
+import uuid
 import pandas as pd
 import streamlit as st
 
@@ -298,7 +298,8 @@ def reset_trial_state() -> None:
 
 def start_session(scenarios: List[Dict[str, Any]]) -> None:
     st.session_state.session_started = True
-    st.session_state.session_id = f"S{int(time.time())}"
+
+    st.session_state.session_id = str(uuid.uuid4())[:8]
 
     if st.session_state.condition_assignment_mode == "random":
         st.session_state.condition_key = random.choice(list(CONDITIONS.keys()))
@@ -351,20 +352,22 @@ def checklist_type() -> str:
     return CONDITIONS[st.session_state.condition_key]["checklist_type"]
 
 
-def log_event(action: str, extra: Optional[Dict[str, Any]] = None) -> None:
+def log_event(action: str, extra=None):
+
     row = {
         "session_id": st.session_state.session_id,
         "participant_id": st.session_state.participant_id,
         "condition": st.session_state.condition_key,
-        "checklist_type": checklist_type() if st.session_state.condition_key else None,
-        "trial_number": current_trial_number() if st.session_state.session_started else None,
-        "scenario_id": st.session_state.scenario["scenario_id"] if st.session_state.scenario else None,
+        "trial_number": current_trial_number(),
+        "scenario_id": st.session_state.scenario["scenario_id"],
         "timestamp_s": round(elapsed_time(), 3),
         "mode": st.session_state.mode,
-        "action": action,
+        "action": action
     }
+
     if extra:
         row.update(extra)
+
     st.session_state.event_rows.append(row)
     st.session_state.trial_event_rows.append(row)
 
