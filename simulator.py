@@ -138,7 +138,8 @@ def load_scenarios() -> List[Dict[str, Any]]:
     scenarios = []
     for path in sorted(SCENARIO_DIR.glob("*.json")):
         with open(path, "r") as f:
-            scenarios.append(json.load(f))
+            scenario = json.load(f)
+            scenarios.append(normalize_scenario(scenario))
     return scenarios
 
 
@@ -498,7 +499,13 @@ def can_finish_trial() -> Tuple[bool, str]:
         return False, "Submit the workload survey first."
     return True, ""
 
-
+def normalize_scenario(s: dict) -> dict:
+    s.setdefault("transition_reason", "Not shown")
+    s.setdefault("diagnosis_prompt", f"Why did the spacecraft leave {s.get('initial_mode', 'the current mode')}?")
+    s.setdefault("diagnosis_options", [s.get("fault", "Unknown fault")])
+    s.setdefault("correct_diagnosis", s.get("fault", "Unknown fault"))
+    s.setdefault("allowed_actions", s.get("correct_actions", []))
+    return s
 
 def finish_trial(timeout: bool = False) -> None:
     if st.session_state.finished:

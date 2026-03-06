@@ -3,14 +3,29 @@
   "title": "Thermal sensor disagreement",
   "initial_mode": "AUTO_THERMAL",
   "fault": "Thermal sensor disagreement",
+  "transition_reason": "Sensor disagreement triggered protective hold",
   "auto_transition": {
     "time": 12,
     "new_mode": "HOLD"
   },
   "correct_mode": "HOLD",
+  "diagnosis_prompt": "Why did the spacecraft leave AUTO_THERMAL?",
+  "diagnosis_options": [
+    "Thermal sensor disagreement",
+    "Fuel leak",
+    "Star tracker dropout"
+  ],
+  "correct_diagnosis": "Thermal sensor disagreement",
   "correct_actions": [
     "ACK ALARM",
     "ENTER HOLD MODE",
     "CYCLE SENSOR BUS"
+  ],
+  "allowed_actions": [
+    "ACK ALARM",
+    "ENTER HOLD MODE",
+    "CYCLE SENSOR BUS",
+    "SWITCH TO MANUAL",
+    "WAIT / MONITOR"
   ]
 }

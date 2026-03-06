@@ -3,14 +3,29 @@
   "title": "Relative navigation degraded",
   "initial_mode": "AUTO_APPROACH",
   "fault": "Relative navigation degraded",
+  "transition_reason": "Navigation confidence dropped below threshold",
   "auto_transition": {
     "time": 10,
     "new_mode": "HOLD"
   },
   "correct_mode": "HOLD",
+  "diagnosis_prompt": "Why did the spacecraft leave AUTO_APPROACH?",
+  "diagnosis_options": [
+    "Navigation degraded",
+    "Power bus reset",
+    "Thermal runaway"
+  ],
+  "correct_diagnosis": "Navigation degraded",
   "correct_actions": [
     "ACK ALARM",
     "ENTER HOLD MODE",
     "RESET NAVIGATION"
+  ],
+  "allowed_actions": [
+    "ACK ALARM",
+    "ENTER HOLD MODE",
+    "RESET NAVIGATION",
+    "SWITCH TO MANUAL",
+    "WAIT / MONITOR"
   ]
 }

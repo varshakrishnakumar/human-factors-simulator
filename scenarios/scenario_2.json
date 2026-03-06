@@ -3,14 +3,29 @@
   "title": "Attitude control instability",
   "initial_mode": "NOMINAL",
   "fault": "Attitude controller saturation",
+  "transition_reason": "Attitude error exceeded safe threshold",
   "auto_transition": {
     "time": 8,
     "new_mode": "SAFE"
   },
   "correct_mode": "SAFE",
+  "diagnosis_prompt": "Why did the spacecraft leave NOMINAL?",
+  "diagnosis_options": [
+    "Attitude control instability",
+    "Navigation degraded",
+    "Communication loss"
+  ],
+  "correct_diagnosis": "Attitude control instability",
   "correct_actions": [
     "ACK ALARM",
     "ENTER SAFE MODE",
     "ISOLATE ACS"
+  ],
+  "allowed_actions": [
+    "ACK ALARM",
+    "ENTER SAFE MODE",
+    "ISOLATE ACS",
+    "SWITCH TO MANUAL",
+    "WAIT / MONITOR"
   ]
 }
