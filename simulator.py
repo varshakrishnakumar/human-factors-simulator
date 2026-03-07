@@ -131,6 +131,8 @@ def ensure_scenario_files() -> None:
         out = SCENARIO_DIR / f"scenario_{s['scenario_id']}.json"
         if not out.exists():
             out.write_text(json.dumps(s, indent=2))
+            
+    
 
 
 def load_scenarios() -> List[Dict[str, Any]]:
@@ -294,7 +296,100 @@ def reset_trial_state() -> None:
         if key in st.session_state:
             del st.session_state[key]
 
+def inject_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        .hf-panel {
+            border: 1px solid #d9d9d9;
+            border-radius: 14px;
+            padding: 1rem 1.1rem;
+            background: #fafafa;
+            margin-bottom: 1rem;
+        }
+        .hf-fault {
+            border-left: 6px solid #d32f2f;
+            background: #fff5f5;
+            padding: 0.9rem 1rem;
+            border-radius: 10px;
+            font-weight: 600;
+            margin: 0.5rem 0 1rem 0;
+        }
+        .hf-subtle {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        .hf-step-current {
+            background: #e8f1ff;
+            border-left: 6px solid #1f77ff;
+            padding: 0.65rem 0.8rem;
+            border-radius: 8px;
+            margin-bottom: 0.45rem;
+            font-weight: 600;
+        }
+        .hf-step-done {
+            background: #eef8ee;
+            border-left: 6px solid #2e7d32;
+            padding: 0.65rem 0.8rem;
+            border-radius: 8px;
+            margin-bottom: 0.45rem;
+        }
+        .hf-step-upcoming {
+            background: #f7f7f7;
+            border-left: 6px solid #bdbdbd;
+            padding: 0.65rem 0.8rem;
+            border-radius: 8px;
+            margin-bottom: 0.45rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
+
+def mode_color(mode: str) -> str:
+    colors = {
+        "NOMINAL": "#2e7d32",
+        "HOLD": "#ef6c00",
+        "SAFE": "#c62828",
+        "MANUAL": "#455a64",
+        "AUTO_APPROACH": "#1565c0",
+        "AUTO_THERMAL": "#6a1b9a",
+    }
+    return colors.get(mode, "#424242")
+
+
+def render_mode_badge(mode: str) -> None:
+    color = mode_color(mode)
+    st.markdown(
+        f"""
+        <div style="
+            background:{color};
+            color:white;
+            padding:14px 18px;
+            border-radius:12px;
+            text-align:center;
+            font-size:2rem;
+            font-weight:700;
+            letter-spacing:0.5px;
+            margin-bottom:0.75rem;">
+            {mode}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_timer(rem: float, total: int) -> None:
+    progress = max(0.0, min(1.0, rem / total))
+    st.progress(progress)
+
+    if rem <= 10:
+        st.error(f"Time Remaining: {int(rem)} s")
+    elif rem <= 20:
+        st.warning(f"Time Remaining: {int(rem)} s")
+    else:
+        st.info(f"Time Remaining: {int(rem)} s")
 
 def start_session(scenarios: List[Dict[str, Any]]) -> None:
     st.session_state.session_started = True
@@ -558,6 +653,7 @@ def finish_trial(timeout: bool = False) -> None:
     st.session_state.data_sink = data_sink
     st.session_state.summary = summary
     st.session_state.finished = True
+    st.session_state.trial_event_rows = []
 
 
 def render_sidebar_setup(scenarios: List[Dict[str, Any]]) -> None:
@@ -605,13 +701,11 @@ def render_sidebar_setup(scenarios: List[Dict[str, Any]]) -> None:
 def render_study_header() -> None:
     st.title("Spacecraft Anomaly Response Experiment")
     st.caption("Study-ready prototype for comparing linear vs. branching checklist designs under time pressure.")
-
     if st.session_state.session_started:
-        st.write(
-            f"**Participant:** {st.session_state.participant_id}  \\n"
-            f"**Condition:** {st.session_state.condition_key}  \\n"
-            f"**Trial:** {current_trial_number()} / {total_trials()}"
-        )
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Participant", st.session_state.participant_id)
+        c2.metric("Condition", st.session_state.condition_key)
+        c3.metric("Trial", f"{current_trial_number()}/{total_trials()}")
 
 
 
@@ -627,23 +721,34 @@ def render_instructions() -> None:
 def render_console() -> None:
     scenario = st.session_state.scenario
     st.subheader("Spacecraft Console")
-    st.metric("Current Mode", st.session_state.mode)
-    st.write(f"**Fault:** {scenario['fault']}")
-    st.write(f"**Reason cue:** {scenario.get('transition_reason', 'Not shown')}")
-    st.write(
-        f"**Auto-transition:** {scenario['auto_transition']['new_mode']} at {scenario['auto_transition']['time']} s"
+
+    render_mode_badge(st.session_state.mode)
+
+    st.markdown(
+        f"""
+        <div class="hf-fault">
+            FAULT: {scenario['fault']}
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    rem = remaining_time()
-    if rem <= 10:
-        st.error(f"Time Remaining: {int(rem)} s")
-    else:
-        st.info(f"Time Remaining: {int(rem)} s")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.metric("Target Mode", scenario["correct_mode"])
+    with c2:
+        st.metric("Auto-transition", f"{scenario['auto_transition']['new_mode']} @ {scenario['auto_transition']['time']} s")
 
-    st.write("### Available Actions")
-    allowed_actions = st.session_state.scenario.get("allowed_actions", [])
+    st.caption(f"Reason cue: {scenario.get('transition_reason', 'Not shown')}")
 
-    # Only show actions for the current scenario.
+    render_timer(remaining_time(), current_time_limit())
+
+    st.markdown("### Available Actions")
+    allowed_actions = scenario.get("allowed_actions", [])
+
+    if checklist_type() == "branching" and not st.session_state.branch_gate_open:
+        st.warning("Recovery actions are locked until mode and diagnosis are verified.")
+
     cols = st.columns(2)
     for i, action in enumerate(allowed_actions):
         disabled = False
@@ -664,10 +769,21 @@ def render_linear_checklist() -> None:
     st.caption("Fixed action sequence. No explicit verification step is required.")
 
     expected = current_expected_step()
+
     for i, step in enumerate(scenario["correct_actions"], start=1):
         done = step in st.session_state.completed_actions
-        marker = "✅" if done else "➡️" if step == expected else "X"
-        st.write(f"{marker} Step {i}: {step}")
+
+        if done:
+            css_class = "hf-step-done"
+            label = f"✅ Step {i}: {step}"
+        elif step == expected:
+            css_class = "hf-step-current"
+            label = f"➡️ Step {i}: {step}"
+        else:
+            css_class = "hf-step-upcoming"
+            label = f"⬜ Step {i}: {step}"
+
+        st.markdown(f'<div class="{css_class}">{label}</div>', unsafe_allow_html=True)
 
     st.write(f"**Order errors:** {st.session_state.order_errors}")
 
@@ -704,14 +820,27 @@ def render_branching_checklist() -> None:
         st.rerun()
 
     st.markdown("---")
-    st.write(f"Mode verified: {'✅' if st.session_state.mode_verified else 'X'}")
-    st.write(f"Diagnosis verified: {'✅' if st.session_state.diagnosis_verified else 'X'}")
+    st.markdown(
+    f'<div class="{"hf-step-done" if st.session_state.mode_verified else "hf-step-upcoming"}">'
+    f'{"✅" if st.session_state.mode_verified else "⬜"} Mode verified'
+    f'</div>',
+    unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        f'<div class="{"hf-step-done" if st.session_state.diagnosis_verified else "hf-step-upcoming"}">'
+        f'{"✅" if st.session_state.diagnosis_verified else "⬜"} Diagnosis verified'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
     if st.session_state.branch_gate_open:
         st.success("Recovery branch unlocked. Proceed with the recovery actions below.")
         for action in scenario["correct_actions"]:
-            done = "✅" if action in st.session_state.completed_actions else "X"
-            st.write(f"{done} {action}")
+            done = action in st.session_state.completed_actions
+            css_class = "hf-step-done" if done else "hf-step-current"
+            icon = "✅" if done else "➡️"
+            st.markdown(f'<div class="{css_class}">{icon} {action}</div>', unsafe_allow_html=True)
     else:
         st.warning("Recovery actions stay disabled until both checks are correct.")
 
@@ -763,9 +892,9 @@ def render_summary() -> None:
         st.info("Session complete. You can export or analyze your logged data.")
 
 
-
 st.set_page_config(page_title="Checklist Design Experiment", layout="wide")
 init_state()
+inject_styles()
 all_scenarios = load_scenarios()
 
 render_sidebar_setup(all_scenarios)
