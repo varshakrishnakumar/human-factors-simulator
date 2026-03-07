@@ -740,20 +740,27 @@ def render_console() -> None:
         st.metric("Auto-transition", f"{scenario['auto_transition']['new_mode']} @ {scenario['auto_transition']['time']} s")
 
     st.caption(f"Reason cue: {scenario.get('transition_reason', 'Not shown')}")
-
     render_timer(remaining_time(), current_time_limit())
 
     st.markdown("### Available Actions")
     allowed_actions = scenario.get("allowed_actions", [])
+    expected = current_expected_step()
 
     if checklist_type() == "branching" and not st.session_state.branch_gate_open:
         st.warning("Recovery actions are locked until mode and diagnosis are verified.")
 
+    if checklist_type() == "linear":
+        st.info("Linear condition: complete the displayed checklist steps in order.")
+
     cols = st.columns(2)
     for i, action in enumerate(allowed_actions):
         disabled = False
+
         if checklist_type() == "branching" and action in scenario["correct_actions"]:
             disabled = not st.session_state.branch_gate_open
+
+        elif checklist_type() == "linear" and action in scenario["correct_actions"]:
+            disabled = action != expected
 
         with cols[i % 2]:
             if st.button(action, use_container_width=True, disabled=disabled):
