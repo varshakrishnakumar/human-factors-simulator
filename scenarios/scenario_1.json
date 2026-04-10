@@ -1,31 +1,73 @@
 {
   "scenario_id": 1,
-  "title": "Relative navigation degraded",
-  "initial_mode": "AUTO_APPROACH",
-  "fault": "Relative navigation degraded",
-  "transition_reason": "Navigation confidence dropped below threshold",
+  "title": "Navigation Fault Recovery",
+  "initial_mode": "AUTO",
+  "fault": "Loss of navigation data",
+  "transition_reason": "Navigation data fault triggered an automatic HOLD transition",
   "auto_transition": {
-    "time": 10,
+    "time": 5,
     "new_mode": "HOLD"
   },
-  "correct_mode": "HOLD",
-  "diagnosis_prompt": "Why did the spacecraft leave AUTO_APPROACH?",
+  "correct_mode": "AUTO",
+  "expected_transition_mode": "HOLD",
+  "diagnosis_prompt": "Did the spacecraft transition because of loss of navigation data?",
   "diagnosis_options": [
-    "Navigation degraded",
-    "Power bus reset",
-    "Thermal runaway"
+    "Yes - loss of navigation data",
+    "No - another fault triggered the transition"
   ],
-  "correct_diagnosis": "Navigation degraded",
+  "correct_diagnosis": "Yes - loss of navigation data",
+  "linear_actions": [
+    "ACK ALARM",
+    "SILENCE CAUTION TONE",
+    "OPEN GNC STATUS PANEL",
+    "RESET NAVIGATION FILTER",
+    "REINITIALIZE STAR TRACKER",
+    "CONFIRM NAVIGATION DATA RESTORED",
+    "SELECT AUTO MODE",
+    "VERIFY ATTITUDE STABLE",
+    "REPORT PROCEDURE COMPLETE"
+  ],
+  "branch_opening_actions": [
+    "ACK ALARM",
+    "OPEN GNC STATUS PANEL"
+  ],
+  "branch_recovery_actions": [
+    "RESET NAVIGATION FILTER",
+    "REINITIALIZE STAR TRACKER"
+  ],
+  "branch_final_actions": [
+    "SELECT AUTO MODE",
+    "VERIFY ATTITUDE STABLE",
+    "REPORT PROCEDURE COMPLETE"
+  ],
+  "action_expected_modes": {
+    "RESET NAVIGATION FILTER": "HOLD",
+    "REINITIALIZE STAR TRACKER": "HOLD",
+    "CONFIRM NAVIGATION DATA RESTORED": "HOLD",
+    "SELECT AUTO MODE": "HOLD",
+    "VERIFY ATTITUDE STABLE": "AUTO",
+    "REPORT PROCEDURE COMPLETE": "AUTO"
+  },
   "correct_actions": [
     "ACK ALARM",
-    "ENTER HOLD MODE",
-    "RESET NAVIGATION"
+    "SILENCE CAUTION TONE",
+    "OPEN GNC STATUS PANEL",
+    "RESET NAVIGATION FILTER",
+    "REINITIALIZE STAR TRACKER",
+    "CONFIRM NAVIGATION DATA RESTORED",
+    "SELECT AUTO MODE",
+    "VERIFY ATTITUDE STABLE",
+    "REPORT PROCEDURE COMPLETE"
   ],
   "allowed_actions": [
     "ACK ALARM",
-    "ENTER HOLD MODE",
-    "RESET NAVIGATION",
-    "SWITCH TO MANUAL",
-    "WAIT / MONITOR"
+    "SILENCE CAUTION TONE",
+    "OPEN GNC STATUS PANEL",
+    "RESET NAVIGATION FILTER",
+    "REINITIALIZE STAR TRACKER",
+    "CONFIRM NAVIGATION DATA RESTORED",
+    "SELECT AUTO MODE",
+    "VERIFY ATTITUDE STABLE",
+    "REPORT PROCEDURE COMPLETE"
   ]
 }

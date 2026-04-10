@@ -53,6 +53,11 @@ def extract_spreadsheet_id(value: str) -> str:
     return match.group(1) if match else value.strip()
 
 
+def sanitize_group_name(group_name: str) -> str:
+    cleaned = re.sub(r"[^a-zA-Z0-9]+", "_", group_name.strip().lower()).strip("_")
+    return cleaned or "unassigned"
+
+
 def load_secrets_file() -> dict:
     if tomllib is None or not SECRETS_PATH.exists():
         return {}
@@ -94,6 +99,35 @@ def worksheet_to_frame(worksheet, pd_module):
     return pd_module.DataFrame(rows, columns=headers)
 
 
+def write_group_exports(frame, worksheet_name: str, output_dir: Path) -> None:
+    if frame.empty:
+        return
+
+    group_labels = None
+    if "subject_group" in frame.columns:
+        group_labels = frame["subject_group"].fillna("").astype(str).str.strip()
+
+    if "condition" in frame.columns:
+        condition_labels = frame["condition"].fillna("").astype(str).str.strip()
+        if group_labels is None:
+            group_labels = condition_labels
+        else:
+            group_labels = group_labels.where(group_labels != "", condition_labels)
+
+    if group_labels is None:
+        return
+
+    export_frame = frame.copy()
+    export_frame["_group_label"] = group_labels.where(group_labels != "", "unassigned")
+
+    for group_label, subset in export_frame.groupby("_group_label", sort=True):
+        group_dir = output_dir / "by_group" / sanitize_group_name(str(group_label))
+        group_dir.mkdir(parents=True, exist_ok=True)
+        group_output_path = group_dir / f"{worksheet_name}.csv"
+        subset.drop(columns="_group_label").to_csv(group_output_path, index=False)
+        print(f"Wrote {len(subset)} rows to {group_output_path}")
+
+
 def main() -> None:
     args = parse_args()
 
@@ -124,6 +158,7 @@ def main() -> None:
         output_path = output_dir / f"{worksheet_name}.csv"
         frame.to_csv(output_path, index=False)
         print(f"Wrote {len(frame)} rows to {output_path}")
+        write_group_exports(frame, worksheet_name, output_dir)
 
 
 if __name__ == "__main__":

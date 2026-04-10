@@ -20,6 +20,8 @@ That writes:
 
 - `analysis/events.csv`
 - `analysis/summaries.csv`
+- `analysis/by_group/<group>/events.csv`
+- `analysis/by_group/<group>/summaries.csv`
 
 ## Credential options
 
