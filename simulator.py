@@ -15,9 +15,11 @@ except Exception:
     Credentials = None
 
 
-SCENARIO_DIR = Path("scenarios")
-EVENT_LOG = Path("event_log.csv")
-SUMMARY_LOG = Path("summary_log.csv")
+BASE_DIR = Path(__file__).resolve().parent
+SCENARIO_DIR = BASE_DIR / "scenarios"
+ANALYSIS_DIR = BASE_DIR / "analysis"
+EVENT_LOG = ANALYSIS_DIR / "events.csv"
+SUMMARY_LOG = ANALYSIS_DIR / "summaries.csv"
 
 GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -211,6 +213,7 @@ def append_rows_to_google_sheet(kind: str, rows: List[Dict[str, Any]]) -> bool:
 def append_rows_local(path: Path, rows: List[Dict[str, Any]]) -> None:
     if not rows:
         return
+    path.parent.mkdir(parents=True, exist_ok=True)
     df = pd.DataFrame(rows)
     header = not path.exists()
     df.to_csv(path, mode="a", index=False, header=header)
