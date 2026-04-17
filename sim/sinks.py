@@ -16,12 +16,19 @@ except Exception:
 def _get_sheet_client():
     if gspread is None or Credentials is None:
         return None
-    if "gcp_service_account" not in st.secrets:
+    try:
+        has_secret = "gcp_service_account" in st.secrets
+    except Exception:
         return None
-    creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"], scopes=GOOGLE_SCOPES
-    )
-    return gspread.authorize(creds)
+    if not has_secret:
+        return None
+    try:
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"], scopes=GOOGLE_SCOPES
+        )
+        return gspread.authorize(creds)
+    except Exception:
+        return None
 
 
 @st.cache_resource(show_spinner=False)
@@ -29,10 +36,16 @@ def _get_spreadsheet():
     client = _get_sheet_client()
     if client is None:
         return None
-    spreadsheet_id = st.secrets.get("google_sheets", {}).get("spreadsheet_id")
+    try:
+        spreadsheet_id = st.secrets.get("google_sheets", {}).get("spreadsheet_id")
+    except Exception:
+        return None
     if not spreadsheet_id:
         return None
-    return client.open_by_key(spreadsheet_id)
+    try:
+        return client.open_by_key(spreadsheet_id)
+    except Exception:
+        return None
 
 
 def _get_worksheet(name: str, rows: int = 1000, cols: int = 40):
@@ -42,7 +55,10 @@ def _get_worksheet(name: str, rows: int = 1000, cols: int = 40):
     try:
         return spreadsheet.worksheet(name)
     except Exception:
-        return spreadsheet.add_worksheet(title=name, rows=rows, cols=cols)
+        try:
+            return spreadsheet.add_worksheet(title=name, rows=rows, cols=cols)
+        except Exception:
+            return None
 
 
 def _append_sheet(name: str, rows: List[Dict[str, Any]]) -> bool:
@@ -51,22 +67,24 @@ def _append_sheet(name: str, rows: List[Dict[str, Any]]) -> bool:
     ws = _get_worksheet(name)
     if ws is None:
         return False
-
-    row_headers = list(rows[0].keys())
-    existing = ws.row_values(1)
-    if not existing:
-        headers = row_headers
-        ws.append_row(headers)
-    else:
-        headers = existing[:]
-        for h in row_headers:
-            if h not in headers:
-                headers.append(h)
-        if headers != existing:
-            ws.update([headers], "A1")
-    values = [[r.get(c, "") for c in headers] for r in rows]
-    ws.append_rows(values, value_input_option="USER_ENTERED")
-    return True
+    try:
+        row_headers = list(rows[0].keys())
+        existing = ws.row_values(1)
+        if not existing:
+            headers = row_headers
+            ws.append_row(headers)
+        else:
+            headers = existing[:]
+            for h in row_headers:
+                if h not in headers:
+                    headers.append(h)
+            if headers != existing:
+                ws.update([headers], "A1")
+        values = [[r.get(c, "") for c in headers] for r in rows]
+        ws.append_rows(values, value_input_option="USER_ENTERED")
+        return True
+    except Exception:
+        return False
 
 
 def _append_local(name: str, rows: List[Dict[str, Any]]) -> str:
