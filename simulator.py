@@ -8,6 +8,7 @@ except ImportError:
 from sim.state import init_state
 from sim.styles import inject_styles
 from sim.trial import (
+    advance_after_trial,
     checklist_type,
     maybe_auto_transition,
     tick_timer,
@@ -15,13 +16,14 @@ from sim.trial import (
 from sim.views import (
     render_branching_checklist,
     render_console,
+    render_familiarization_complete,
     render_final_survey,
     render_intro_instructions,
     render_linear_checklist,
     render_session_summary,
     render_sidebar_setup,
+    render_status_bar,
     render_study_header,
-    render_trial_complete,
 )
 
 
@@ -54,6 +56,15 @@ def main() -> None:
     maybe_auto_transition()
     tick_timer()
 
+    if st.session_state.finished and not st.session_state.session_finished:
+        # Familiarization: give the subject a moment to start real trials manually.
+        # Real trials: auto-advance to the next trial (or the final survey).
+        if st.session_state.in_familiarization:
+            render_familiarization_complete()
+            return
+        advance_after_trial()
+        st.rerun()
+
     if st.session_state.session_finished:
         if not st.session_state.session_survey_submitted:
             render_final_survey()
@@ -61,9 +72,7 @@ def main() -> None:
             render_session_summary()
         return
 
-    if st.session_state.finished:
-        render_trial_complete()
-        return
+    render_status_bar()
 
     left, right = st.columns([1.15, 1], gap="large")
     with left:

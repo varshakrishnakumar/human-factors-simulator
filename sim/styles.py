@@ -39,77 +39,73 @@ def inject_styles() -> None:
         }
         [data-testid="stAppViewContainer"] > .main .block-container {
             max-width: 1400px;
-            padding-top: 1.25rem;
-            padding-bottom: 2.5rem;
+            padding-top: 0.6rem;
+            padding-bottom: 1.5rem;
         }
         .hf-masthead {
             position: relative;
             overflow: hidden;
-            border-radius: 18px;
-            border: 1px solid var(--hf-line);
-            background: linear-gradient(145deg, rgba(10, 16, 25, 0.98), rgba(16, 24, 38, 0.96));
-            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
-            padding: 0.9rem 1.1rem 0.95rem;
-            margin-bottom: 0.9rem;
-        }
-        .hf-masthead::before {
-            content: "";
-            position: absolute;
-            inset: 0 0 auto 0;
-            height: 6px;
-            background: repeating-linear-gradient(-45deg,
-                rgba(250, 204, 21, 0.92) 0 10px,
-                rgba(6, 10, 15, 1) 10px 20px);
-        }
-        .hf-masthead-eyebrow {
-            margin-top: 0.4rem;
-            font-size: 0.68rem;
-            font-weight: 700;
-            letter-spacing: 0.24em;
-            text-transform: uppercase;
-            color: var(--hf-amber);
-        }
-        .hf-masthead-title {
-            margin-top: 0.25rem;
-            font-size: clamp(1.5rem, 3vw, 2.3rem);
-            line-height: 1.02;
-            font-weight: 800;
-            color: var(--hf-text);
-        }
-        .hf-chip-row {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 0.55rem;
-            margin-top: 0.65rem;
-        }
-        .hf-chip {
             border-radius: 12px;
             border: 1px solid var(--hf-line);
-            background: linear-gradient(180deg, rgba(14, 21, 32, 0.96), rgba(10, 15, 24, 0.94));
-            padding: 0.55rem 0.7rem;
+            background: linear-gradient(90deg, rgba(10, 16, 25, 0.98), rgba(16, 24, 38, 0.96));
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+            padding: 0.5rem 0.85rem 0.6rem;
+            margin-bottom: 0.5rem;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        .hf-masthead-title {
+            font-size: 1.1rem;
+            line-height: 1.1;
+            font-weight: 800;
+            color: var(--hf-text);
+            letter-spacing: 0.02em;
+        }
+        .hf-masthead-eyebrow {
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--hf-amber);
+            margin-bottom: 0.1rem;
+        }
+        .hf-chip-row {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .hf-chip {
+            border-radius: 8px;
+            border: 1px solid var(--hf-line);
+            background: rgba(14, 21, 32, 0.9);
+            padding: 0.3rem 0.6rem;
+            display: flex;
+            gap: 0.4rem;
+            align-items: baseline;
         }
         .hf-chip-label {
-            font-size: 0.66rem;
-            letter-spacing: 0.16em;
+            font-size: 0.58rem;
+            letter-spacing: 0.18em;
             text-transform: uppercase;
             color: var(--hf-muted);
-            margin-bottom: 0.25rem;
         }
         .hf-chip-value {
             color: var(--hf-text);
             font-family: "SFMono-Regular", Menlo, Consolas, monospace;
-            font-size: 0.95rem;
-            line-height: 1.2;
-            word-break: break-word;
+            font-size: 0.82rem;
+            line-height: 1.1;
         }
 
         /* ----------- Console vs Checklist physical & visual split ----------- */
         .hf-console-panel,
         .hf-checklist-panel {
             position: relative;
-            border-radius: 20px;
-            padding: 1rem 1.1rem 1.15rem;
-            margin-bottom: 1rem;
+            border-radius: 14px;
+            padding: 0.75rem 0.85rem 0.9rem;
+            margin-bottom: 0.6rem;
         }
         .hf-console-panel {
             border: 1px solid rgba(95, 180, 255, 0.3);
@@ -237,6 +233,49 @@ def inject_styles() -> None:
             font-weight: 700;
         }
 
+        /* Sticky status bar (timer + mode + fault) */
+        .hf-statusbar {
+            position: sticky;
+            top: 3.5rem;
+            z-index: 50;
+            display: grid;
+            grid-template-columns: minmax(180px, 1fr) minmax(120px, auto) 2fr;
+            gap: 0.75rem;
+            padding: 0.6rem 0.85rem;
+            margin-bottom: 0.75rem;
+            border-radius: 14px;
+            border: 1px solid rgba(95, 180, 255, 0.35);
+            background: linear-gradient(180deg, rgba(9, 16, 28, 0.98), rgba(6, 11, 20, 0.98));
+            backdrop-filter: blur(6px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+        }
+        .hf-statusbar-cell {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 0;
+        }
+        .hf-statusbar-label {
+            font-size: 0.6rem;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--hf-muted);
+            margin-bottom: 0.15rem;
+        }
+        .hf-statusbar-value {
+            font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+            font-weight: 800;
+            font-size: 1.5rem;
+            line-height: 1.1;
+            color: var(--hf-text);
+        }
+        .hf-statusbar-fault .hf-statusbar-value {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #ffdcd7;
+            text-transform: uppercase;
+        }
+
         /* Timer */
         .hf-timer {
             display: flex;
@@ -275,14 +314,14 @@ def inject_styles() -> None:
         .hf-step-upcoming,
         .hf-step-terminal {
             position: relative;
-            border-radius: 12px;
+            border-radius: 8px;
             border: 1px solid var(--hf-line);
-            padding: 0.6rem 0.8rem;
-            margin-bottom: 0.4rem;
+            padding: 0.35rem 0.6rem;
+            margin-bottom: 0.25rem;
             background: rgba(13, 20, 31, 0.6);
             font-family: "SFMono-Regular", Menlo, Consolas, monospace;
-            font-size: 0.9rem;
-            line-height: 1.35;
+            font-size: 0.82rem;
+            line-height: 1.3;
             color: var(--hf-text);
         }
         .hf-step-current { border-color: rgba(95, 180, 255, 0.45); box-shadow: inset 0 0 0 1px rgba(95, 180, 255, 0.1); }
@@ -377,21 +416,117 @@ def inject_styles() -> None:
             line-height: 1.3;
         }
 
+        /* Form inputs — force readable text on the dark theme */
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] p,
+        [data-testid="stSidebar"] span,
+        [data-testid="stSidebar"] div,
+        .stApp label,
+        .stApp p,
+        .stMarkdown,
+        .stMarkdown p,
+        .stMarkdown li,
+        .stCaption,
+        [data-testid="stCaptionContainer"],
+        [data-testid="stWidgetLabel"],
+        [data-testid="stWidgetLabel"] * {
+            color: var(--hf-text);
+        }
+        .stApp .stMarkdown a {
+            color: var(--hf-cyan);
+        }
+
+        /* Text inputs & text areas */
+        .stApp input[type="text"],
+        .stApp input[type="number"],
+        .stApp input[type="password"],
+        .stApp textarea,
+        .stApp [data-baseweb="input"] input,
+        .stApp [data-baseweb="textarea"] textarea {
+            color: var(--hf-text) !important;
+            -webkit-text-fill-color: var(--hf-text) !important;
+            background-color: rgba(10, 16, 25, 0.85) !important;
+            caret-color: var(--hf-text);
+        }
+        .stApp [data-baseweb="input"],
+        .stApp [data-baseweb="textarea"] {
+            background-color: rgba(10, 16, 25, 0.85) !important;
+            border: 1px solid var(--hf-line) !important;
+        }
+        .stApp input::placeholder,
+        .stApp textarea::placeholder {
+            color: rgba(148, 167, 189, 0.55) !important;
+            -webkit-text-fill-color: rgba(148, 167, 189, 0.55) !important;
+        }
+
+        /* Selectbox — closed control */
+        .stApp [data-baseweb="select"] > div {
+            background-color: rgba(10, 16, 25, 0.85) !important;
+            border-color: var(--hf-line) !important;
+            color: var(--hf-text) !important;
+        }
+        .stApp [data-baseweb="select"] [data-baseweb="tag"],
+        .stApp [data-baseweb="select"] span,
+        .stApp [data-baseweb="select"] div {
+            color: var(--hf-text) !important;
+        }
+        /* Selectbox — open dropdown menu */
+        [data-baseweb="popover"] [role="listbox"],
+        [data-baseweb="menu"] {
+            background-color: #0d1420 !important;
+            color: var(--hf-text) !important;
+            border: 1px solid var(--hf-line) !important;
+        }
+        [data-baseweb="popover"] li,
+        [data-baseweb="menu"] li {
+            color: var(--hf-text) !important;
+        }
+        [data-baseweb="popover"] li:hover,
+        [data-baseweb="menu"] li:hover {
+            background-color: rgba(95, 180, 255, 0.12) !important;
+        }
+
+        /* Radio */
+        .stApp [data-baseweb="radio"] label,
+        .stApp [data-baseweb="radio"] span,
+        .stApp [role="radiogroup"] label,
+        .stApp [role="radiogroup"] span {
+            color: var(--hf-text) !important;
+        }
+
+        /* Slider — value bubble and tick labels */
+        .stApp [data-testid="stSlider"] label,
+        .stApp [data-testid="stSlider"] span,
+        .stApp [data-testid="stSlider"] div[data-baseweb="slider"] div {
+            color: var(--hf-text) !important;
+        }
+        .stApp [data-baseweb="slider"] [role="slider"] {
+            background-color: var(--hf-blue) !important;
+        }
+
+        /* Tooltip icons next to labels */
+        .stApp [data-testid="stTooltipIcon"] svg {
+            color: var(--hf-muted) !important;
+            fill: var(--hf-muted) !important;
+        }
+
         /* Buttons */
         .stButton > button {
             width: 100%;
-            min-height: 3rem;
-            border-radius: 12px;
+            min-height: 2.4rem;
+            padding: 0.3rem 0.6rem;
+            margin-bottom: 0.25rem;
+            border-radius: 10px;
             border: 1px solid rgba(120, 147, 181, 0.26);
             background: linear-gradient(180deg, rgba(17, 26, 39, 0.98), rgba(10, 16, 25, 0.96));
             color: var(--hf-text);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 16px rgba(0, 0, 0, 0.2);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
             font-weight: 800;
             letter-spacing: 0.06em;
             text-transform: uppercase;
             transition: transform 120ms ease, border-color 120ms ease;
         }
-        .stButton > button p { color: inherit; font-size: 0.88rem; }
+        .stButton > button p { color: inherit; font-size: 0.78rem; line-height: 1.1; margin: 0; }
         .stButton > button:hover:not(:disabled) {
             transform: translateY(-1px);
             border-color: rgba(95, 180, 255, 0.5);
@@ -402,6 +537,58 @@ def inject_styles() -> None:
             border-style: dashed;
             opacity: 0.7;
         }
+
+        /* Intro briefing */
+        .hf-brief {
+            border-radius: 14px;
+            border: 1px solid var(--hf-line);
+            background: linear-gradient(180deg, rgba(13, 20, 31, 0.9), rgba(10, 16, 25, 0.9));
+            padding: 0.85rem 1.1rem 1rem;
+            margin: 0.5rem 0 0.75rem;
+            color: var(--hf-text);
+            line-height: 1.5;
+        }
+        .hf-brief h3 {
+            color: var(--hf-cyan);
+            font-size: 0.82rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            font-weight: 800;
+            margin: 0.85rem 0 0.35rem;
+        }
+        .hf-brief h3:first-child { margin-top: 0.2rem; }
+        .hf-brief p, .hf-brief li { color: var(--hf-text); font-size: 0.92rem; }
+        .hf-brief ol, .hf-brief ul { padding-left: 1.2rem; margin: 0.2rem 0 0.4rem; }
+
+        /* NASA-TLX survey blocks */
+        .hf-tlx-block {
+            margin-top: 0.6rem;
+            margin-bottom: 0.2rem;
+        }
+        .hf-tlx-label {
+            color: var(--hf-cyan);
+            font-size: 0.72rem;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+        .hf-tlx-question {
+            color: var(--hf-text);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 0.15rem;
+            margin-bottom: 0.25rem;
+        }
+        .hf-tlx-anchors {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.5rem;
+            font-size: 0.78rem;
+            color: var(--hf-muted);
+            margin: 0.1rem 0 0.85rem;
+        }
+        .hf-tlx-anchors strong { color: var(--hf-text); }
+        .hf-tlx-current { color: var(--hf-amber); font-weight: 700; }
 
         /* Rocket celebration */
         .hf-rocket-stage {
