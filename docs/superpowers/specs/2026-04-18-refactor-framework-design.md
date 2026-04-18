@@ -13,7 +13,10 @@ Restructure the codebase so future changes requested by the data team (see data 
 
 - **In scope:** module structure, typed domain models, engine/UI separation, per-screen files, a registry for scenarios, survey-as-data, unit tests for the extracted engine, a smoke test, an IO layer split.
 - **Out of scope:** any of the data team's actual feature requests (live timer fix, interface trim, rocketship stretch, 4th scenario, etc.). Those are follow-up work enabled by this refactor, not part of it.
-- **Frozen:** output schemas for the `assignments`, `events`, and `summaries` worksheets/CSVs — column names and semantics stay identical so existing analysis scripts don't break.
+- **Frozen:** output schemas for the `assignments`, `events`, and `summaries` worksheets/CSVs — column names and semantics stay identical so existing analysis scripts don't break. Column sets:
+  - `assignments`: `session_id`, `participant_id`, `experience`, `condition`, `checklist_type`, `time_limit`, `assignment_mode`, `scenario_order`, `ts`
+  - `events`: `session_id`, `participant_id`, `experience`, `condition`, `checklist_type`, `is_familiarization`, `trial_number`, `scenario_id`, `timestamp_s`, `mode`, `action`, plus event-type-specific extras (`from_mode`, `to_mode`, `wrong_mode`, `attempted`, `expected`, `choice`, `correct`, `end_reason`, `completion_time`, etc.) which Google Sheets reconciles by name — existing behavior
+  - `summaries`: see the `TrialResult` field list below, plus the survey fields merged in at submission
 
 ## Non-goals
 
@@ -25,6 +28,10 @@ Restructure the codebase so future changes requested by the data team (see data 
 ## Target architecture
 
 Shape 1 — layered. Domain layer is pure Python, UI layer is Streamlit-only, IO layer wraps persistence.
+
+**Streamlit import rule.** `import streamlit as st` is allowed in exactly two places: `sim/ui/**` (the UI layer) and `sim/state.py` (the bridge — it has to touch `st.session_state`). Every file under `sim/domain/` and `sim/io/` must import-clean without Streamlit installed. Smoke test enforces this by importing each domain/io module in isolation.
+
+**`__init__.py`.** Every directory under `sim/` is a package — each gets an `__init__.py` (empty unless it needs to re-export). Missing ones break imports silently under some Python setups.
 
 ```
 sim/
@@ -265,9 +272,21 @@ class TrialEngineSnapshot:
 
 Streamlit's own widget state (`tlx_mental`, `branch_decision_3`, etc.) stays in `st.session_state` raw — widget keys are Streamlit's territory.
 
+**Derived flags.** Today's `st.session_state.trial_started`, `st.session_state.scenario`, `st.session_state.mode`, `st.session_state.completion_time`, `st.session_state.end_reason`, and `st.session_state.finished` are eliminated as stored flags and become derivations off the loaded engine:
+
+- `trial_started` → `engine is not None`
+- `scenario` → `engine.scenario` when engine exists
+- `mode` → `engine.mode`
+- `completion_time` / `end_reason` / `finished` → `engine.result().completion_time_s` / `engine.end_reason()` / `engine.is_finished()`
+
+Screens read these off the engine directly; nothing extra is stored.
+
+**Assignment emission.** `io.sinks.record_assignment(...)` is called once per session from the session-start path (what `start_session` does today in `trial.py:117`), not per trial. The bridge assembles the assignment row from `IdentityState` + `Condition` + `SessionState.trial_order` at that moment.
+
 **Serialization for sinks.**
 
-- **Events:** engine produces `TrialEvent` objects with only engine-level data (timestamp, mode, action, extras). The bridge exposes `serialize_events(events, context: TrialContext, condition: Condition, scenario: Scenario) -> list[dict]` which enriches each event with the frozen `events`-worksheet columns (`session_id`, `participant_id`, `experience`, `condition`, `checklist_type`, `is_familiarization`, `trial_number`, `scenario_id`, `timestamp_s`, `mode`, `action`, plus event-specific extras). Dicts go to `io.sinks.persist("events", ...)`.
+- **Events:** engine produces `TrialEvent` objects with only engine-level data (timestamp, mode, action, extras). The bridge exposes `serialize_events(events, context: TrialContext, condition: Condition, scenario: Scenario) -> list[dict]` which enriches each event with the frozen `events`-worksheet columns (`session_id`, `participant_id`, `experience`, `condition`, `checklist_type`, `is_familiarization`, `trial_number`, `scenario_id`, `timestamp_s`, `mode`, `action`, plus event-specific extras from `event.extra`). Dicts go to `io.sinks.persist("events", ...)`.
+  - **Familiarization quirk:** when `scenario.is_familiarization`, `checklist_type` in the row is `"practice"`, not `condition.checklist_type`. Matches today's `_log_event` at `trial.py:180`.
 - **Summaries:** `TrialResult` field names match the `summaries` column set exactly, so the bridge serializes with `dataclasses.asdict(result)`. The survey submission step merges in the NASA-TLX fields before calling `io.sinks.persist("summaries", rows)` — same behavior as today's `submit_session_survey`.
 - Google Sheets' `_append_sheet` already reconciles columns by name (existing behavior), so new output fields added in the future simply append as new columns; frozen fields never rename or drop.
 
@@ -283,6 +302,17 @@ Streamlit's own widget state (`tlx_mental`, `branch_decision_3`, etc.) stays in 
 ## Testing (`tests/`)
 
 New top-level `tests/` directory. `pytest` added to a new `requirements-dev.txt` (keeps prod deps clean).
+
+### `conftest.py`
+
+Shared fixtures the engine tests rely on. Provides factory functions that build:
+
+- A minimal linear `Scenario` with 3 steps, one with an `action_expected_modes` entry.
+- A minimal branching `Scenario` with one decision and a terminal step.
+- A `Condition` with `time_limit=60`.
+- A `TrialContext` with dummy identity fields.
+
+Each test composes these into a `TrialEngine` with an explicit `start_time=0.0` so `now` is always an ordinal.
 
 ### `test_engine.py`
 
