@@ -11,7 +11,8 @@ from sim.components import (
     render_section_header,
     render_trigger_cues,
 )
-from sim.config import ACTION_HELP, BACKGROUND_OPTIONS, CONDITIONS
+from sim.domain.action_help import ACTION_HELP
+from sim.domain.conditions import BACKGROUND_OPTIONS, CONDITIONS
 from sim.scenarios import linear_candidates
 from sim.sinks import balanced_condition
 from sim.trial import (
@@ -43,7 +44,7 @@ def render_study_header() -> None:
     else:
         trial_value = "—"
     condition = (
-        CONDITIONS[st.session_state.condition_key]["label"]
+        CONDITIONS[st.session_state.condition_key].label
         if st.session_state.condition_key
         else "—"
     )
@@ -76,7 +77,7 @@ def render_sidebar_setup() -> None:
         st.sidebar.write(f"**Session ID:** `{st.session_state.session_id}`")
         st.sidebar.write(f"**Participant:** {st.session_state.participant_id}")
         st.sidebar.write(f"**Experience:** {st.session_state.experience}")
-        st.sidebar.write(f"**Condition:** {CONDITIONS[st.session_state.condition_key]['label']}")
+        st.sidebar.write(f"**Condition:** {CONDITIONS[st.session_state.condition_key].label}")
         return
 
     st.session_state.participant_id = st.sidebar.text_input(
@@ -104,7 +105,7 @@ def render_sidebar_setup() -> None:
     if st.session_state.condition_assignment_mode == "auto":
         suggested = balanced_condition(st.session_state.experience, condition_keys)
         st.sidebar.markdown(
-            f"**Assigned condition:** `{CONDITIONS[suggested]['label']}`"
+            f"**Assigned condition:** `{CONDITIONS[suggested].label}`"
         )
         st.session_state.condition_key = suggested
     else:
@@ -115,7 +116,7 @@ def render_sidebar_setup() -> None:
             "Condition",
             condition_keys,
             index=condition_keys.index(current),
-            format_func=lambda k: CONDITIONS[k]["label"],
+            format_func=lambda k: CONDITIONS[k].label,
         )
 
     st.sidebar.markdown("---")

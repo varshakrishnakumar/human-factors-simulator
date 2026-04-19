@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 import streamlit as st
 
-from sim.config import (
+from sim.domain.conditions import (
     CONDITIONS,
     FAMILIARIZATION_TIME_LIMIT,
     NUM_REAL_TRIALS,
@@ -18,6 +18,13 @@ from sim.scenarios import (
 )
 from sim.sinks import persist, record_assignment
 from sim.state import reset_trial_state
+
+# TEMPORARY: dict-style access over the new Condition dataclasses, removed
+# once the engine refactor (Task 4) replaces these call sites.
+_CONDITIONS_DICT = {
+    k: {"checklist_type": c.checklist_type, "time_limit": c.time_limit, "label": c.label}
+    for k, c in CONDITIONS.items()
+}
 
 
 # ----- Accessors ---------------------------------------------------------
@@ -32,7 +39,7 @@ def current_time_limit() -> int:
     key = st.session_state.condition_key
     if not key:
         return 60
-    return CONDITIONS[key]["time_limit"]
+    return _CONDITIONS_DICT[key]["time_limit"]
 
 
 def elapsed_time() -> float:
@@ -51,7 +58,7 @@ def checklist_type() -> str:
     key = st.session_state.condition_key
     if not key:
         return "linear"
-    return CONDITIONS[key]["checklist_type"]
+    return _CONDITIONS_DICT[key]["checklist_type"]
 
 
 def current_trial_number() -> int:
@@ -119,8 +126,8 @@ def start_session() -> None:
         "participant_id": st.session_state.participant_id,
         "experience": st.session_state.experience,
         "condition": st.session_state.condition_key,
-        "checklist_type": CONDITIONS[st.session_state.condition_key]["checklist_type"],
-        "time_limit": CONDITIONS[st.session_state.condition_key]["time_limit"],
+        "checklist_type": _CONDITIONS_DICT[st.session_state.condition_key]["checklist_type"],
+        "time_limit": _CONDITIONS_DICT[st.session_state.condition_key]["time_limit"],
         "assignment_mode": st.session_state.condition_assignment_mode,
         "scenario_order": ",".join(str(s["scenario_id"]) for s in st.session_state.trial_order),
         "ts": round(time.time(), 3),
