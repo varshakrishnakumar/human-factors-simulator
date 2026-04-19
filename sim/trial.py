@@ -11,7 +11,7 @@ from sim.domain.conditions import CONDITIONS, FAMILIARIZATION_TIME_LIMIT, NUM_RE
 from sim.domain.engine import TrialEngine
 from sim.domain.models import Condition, Scenario, TrialContext, TrialEvent, TrialResult
 from sim.domain.scenarios.registry import get_all as _get_scenarios, get_by_id, get_familiarization
-from sim.sinks import persist, record_assignment
+from sim.io.sinks import persist, record_assignment
 from sim.state import reset_trial_state
 
 _ENGINE_KEY = "trial_engine"

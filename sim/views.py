@@ -14,7 +14,7 @@ from sim.components import (
 from sim.domain.action_help import ACTION_HELP
 from sim.domain.conditions import BACKGROUND_OPTIONS, CONDITIONS
 from sim.scenarios import linear_candidates
-from sim.sinks import balanced_condition
+from sim.io.sinks import balanced_condition
 from sim.trial import (
     advance_after_trial,
     checklist_type,
