@@ -1,3 +1,5 @@
+import pytest
+
 from sim.domain.scenarios import registry
 
 
@@ -6,7 +8,6 @@ def test_get_all_returns_three_real_scenarios():
 
 
 def test_get_by_id_raises_on_unknown():
-    import pytest
     with pytest.raises(KeyError):
         registry.get_by_id(999)
 

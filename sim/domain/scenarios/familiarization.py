@@ -1,3 +1,6 @@
+"""Familiarization (practice) scenario domain constant."""
+from types import MappingProxyType
+
 from sim.domain.models import (
     ActionStep, AutoTransition, BranchingChecklist,
     LinearChecklist, Scenario, TriggerCue,
@@ -24,6 +27,6 @@ SCENARIO = Scenario(
             ActionStep(id=1, text="ACK PRACTICE ALERT", next=None),
         ),
     ),
-    action_expected_modes={},
+    action_expected_modes=MappingProxyType({}),
     is_familiarization=True,
 )

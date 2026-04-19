@@ -3,7 +3,7 @@ registry while the refactor is in progress. Deleted at the end of step 7."""
 from typing import Any, Dict, List
 
 from sim.domain.models import (
-    ActionStep, DecisionStep, LinearCandidate, Scenario, TerminalStep,
+    ActionStep, DecisionStep, Scenario, TerminalStep,
 )
 from sim.domain.scenarios import registry as _registry
 

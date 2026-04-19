@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 
@@ -76,7 +77,7 @@ class Scenario:
     trigger_cues: Tuple[TriggerCue, ...]
     linear_checklist: LinearChecklist
     branching_checklist: BranchingChecklist
-    action_expected_modes: Dict[str, str]
+    action_expected_modes: "MappingProxyType[str, str]"
     is_familiarization: bool = False
 
 

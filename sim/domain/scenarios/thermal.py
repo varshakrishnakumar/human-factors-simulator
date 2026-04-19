@@ -1,3 +1,6 @@
+"""Thermal loop recovery scenario domain constant."""
+from types import MappingProxyType
+
 from sim.domain.models import (
     ActionStep, AutoTransition, BranchingChecklist, DecisionOption,
     DecisionStep, LinearChecklist, Scenario, TerminalStep, TriggerCue,
@@ -58,12 +61,12 @@ SCENARIO = Scenario(
             TerminalStep(id=99, text="WRONG BRANCH — STOP", note="Incorrect diagnosis path. Trial ends."),
         ),
     ),
-    action_expected_modes={
+    action_expected_modes=MappingProxyType({
         "CYCLE RADIATOR BYPASS VALVE": "SAFE",
         "ENGAGE BACKUP HEATER": "SAFE",
         "CONFIRM THERMAL LOOP STABLE": "SAFE",
         "SELECT AUTO MODE": "SAFE",
         "VERIFY ATTITUDE STABLE": "AUTO",
         "REPORT PROCEDURE COMPLETE": "AUTO",
-    },
+    }),
 )

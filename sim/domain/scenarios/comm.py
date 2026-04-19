@@ -1,3 +1,6 @@
+"""Communications loss recovery scenario domain constant."""
+from types import MappingProxyType
+
 from sim.domain.models import (
     ActionStep, AutoTransition, BranchingChecklist, DecisionOption,
     DecisionStep, LinearChecklist, Scenario, TerminalStep, TriggerCue,
@@ -58,12 +61,12 @@ SCENARIO = Scenario(
             TerminalStep(id=99, text="WRONG BRANCH — STOP", note="Incorrect diagnosis path. Trial ends."),
         ),
     ),
-    action_expected_modes={
+    action_expected_modes=MappingProxyType({
         "SWITCH TO BACKUP DOWNLINK": "HOLD",
         "REINITIALIZE RF TRANSCEIVER": "HOLD",
         "CONFIRM GROUND LINK RESTORED": "HOLD",
         "SELECT AUTO MODE": "HOLD",
         "VERIFY ATTITUDE STABLE": "AUTO",
         "REPORT PROCEDURE COMPLETE": "AUTO",
-    },
+    }),
 )
