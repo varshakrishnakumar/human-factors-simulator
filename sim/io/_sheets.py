@@ -1,6 +1,6 @@
 """Google Sheets plumbing. Keep this file free of simulator-domain knowledge."""
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import streamlit as st
 
@@ -20,7 +20,7 @@ GOOGLE_SCOPES = [
 ]
 
 
-def get_sheet_client():
+def _get_sheet_client():
     if gspread is None or Credentials is None:
         return None
     try:
@@ -39,8 +39,8 @@ def get_sheet_client():
 
 
 @st.cache_resource(show_spinner=False)
-def get_spreadsheet():
-    client = get_sheet_client()
+def _get_spreadsheet():
+    client = _get_sheet_client()
     if client is None:
         return None
     try:
@@ -55,8 +55,8 @@ def get_spreadsheet():
         return None
 
 
-def get_worksheet(name: str, rows: int = 1000, cols: int = 40):
-    spreadsheet = get_spreadsheet()
+def _get_worksheet(name: str, rows: int = 1000, cols: int = 40):
+    spreadsheet = _get_spreadsheet()
     if spreadsheet is None:
         return None
     try:
@@ -68,10 +68,10 @@ def get_worksheet(name: str, rows: int = 1000, cols: int = 40):
             return None
 
 
-def append_sheet(name: str, rows: List[Dict[str, Any]]) -> bool:
+def _append_sheet(name: str, rows: List[Dict[str, Any]]) -> bool:
     if not rows:
         return True
-    ws = get_worksheet(name)
+    ws = _get_worksheet(name)
     if ws is None:
         return False
     try:

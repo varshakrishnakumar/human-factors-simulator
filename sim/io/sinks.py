@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Tuple
 import pandas as pd
 
 from sim.domain.conditions import balanced_condition as _pure_balanced_condition
-from sim.io._sheets import LOG_DIR, append_sheet, get_worksheet
+from sim.io._sheets import LOG_DIR, _append_sheet, _get_worksheet
 
 
 def _append_local(name: str, rows: List[Dict[str, Any]]) -> str:
@@ -20,7 +20,7 @@ def _append_local(name: str, rows: List[Dict[str, Any]]) -> str:
 
 
 def persist(name: str, rows: List[Dict[str, Any]]) -> str:
-    if append_sheet(name, rows):
+    if _append_sheet(name, rows):
         return "google_sheets"
     return _append_local(name, rows)
 
@@ -30,7 +30,11 @@ def record_assignment(assignment: Dict[str, Any]) -> str:
 
 
 def read_assignment_counts() -> Dict[Tuple[str, str], int]:
-    ws = get_worksheet("assignments")
+    """
+    Return a map of (condition, experience) -> count, read from the assignments
+    worksheet. Empty dict if Sheets is unavailable (caller falls back to round-robin).
+    """
+    ws = _get_worksheet("assignments")
     if ws is None:
         return {}
     try:
