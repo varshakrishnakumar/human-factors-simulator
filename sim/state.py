@@ -1,6 +1,6 @@
 """Phase-scoped state bridge between Streamlit session_state and domain."""
 from dataclasses import asdict, dataclass, field
-from typing import List, Literal, Optional, Tuple
+from typing import List, Literal, Optional
 
 import streamlit as st
 
@@ -12,12 +12,12 @@ class IdentityState:
     condition_key: Optional[str] = None
     assignment_mode: Literal["auto", "manual"] = "auto"
     session_id: Optional[str] = None
-    session_started: bool = False
 
 
 @dataclass
 class SessionState:
-    trial_order: Tuple[int, ...] = ()
+    session_started: bool = False
+    trial_order: List[int] = field(default_factory=list)
     trial_index: int = 0
     did_familiarization: bool = False
     in_familiarization: bool = False
@@ -27,7 +27,6 @@ class SessionState:
     data_sink: Optional[str] = None
 
 
-_IDENTITY_KEYS = {f.name for f in IdentityState.__dataclass_fields__.values()}
 _SESSION_KEYS = {f.name for f in SessionState.__dataclass_fields__.values()}
 
 
@@ -42,12 +41,6 @@ def init_state() -> None:
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
-
-
-def identity() -> IdentityState:
-    data = {k: st.session_state[k] for k in _IDENTITY_KEYS if k != "assignment_mode"}
-    data["assignment_mode"] = st.session_state.get("condition_assignment_mode", "auto")
-    return IdentityState(**data)
 
 
 def session() -> SessionState:

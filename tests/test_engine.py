@@ -1,3 +1,5 @@
+from types import MappingProxyType
+
 from sim.domain.engine import TrialEngine
 
 
@@ -88,7 +90,7 @@ def test_branching_wrong_decision_can_loop_back(ctx, condition_branching):
             )),
             ActionStep(id=3, text="REPORT", next=None),
         )),
-        action_expected_modes={},
+        action_expected_modes=MappingProxyType({}),
     )
     engine = TrialEngine(scenario, condition_branching, ctx, start_time=0.0)
     engine.execute_action("A1", now=1.0)
@@ -125,7 +127,7 @@ def test_branching_procedure_end_when_mode_wrong_at_finish(ctx, condition_branch
             ActionStep(id=1, text="A1", next=2),
             ActionStep(id=2, text="A2", next=None),
         )),
-        action_expected_modes={},
+        action_expected_modes=MappingProxyType({}),
     )
     engine = TrialEngine(scenario, condition_branching, ctx, start_time=0.0)
     # Tick past auto_transition time so mode becomes HOLD before finishing.
@@ -155,7 +157,7 @@ def test_auto_transition_changes_mode_and_logs(ctx, condition_linear):
         trigger_cues=(TriggerCue("a", "b"),),
         linear_checklist=LinearChecklist(title="L", steps=("A",)),
         branching_checklist=BranchingChecklist(title="B", steps=()),
-        action_expected_modes={},
+        action_expected_modes=MappingProxyType({}),
     )
     engine = TrialEngine(scenario, condition_linear, ctx, start_time=0.0)
     engine.tick(now=6.0)

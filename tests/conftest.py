@@ -1,5 +1,7 @@
 """Shared fixtures for engine/scoring tests. Build minimal scenarios inline
 instead of importing the real ones — keeps tests readable and isolated."""
+from types import MappingProxyType
+
 import pytest
 
 from sim.domain.models import (
@@ -41,7 +43,7 @@ def linear_scenario() -> Scenario:
         trigger_cues=(TriggerCue("MODE", "AUTO"),),
         linear_checklist=LinearChecklist(title="L", steps=("A", "B", "C")),
         branching_checklist=BranchingChecklist(title="B", steps=()),
-        action_expected_modes={"B": "HOLD"},
+        action_expected_modes=MappingProxyType({"B": "HOLD"}),
     )
 
 
@@ -66,7 +68,7 @@ def branching_scenario() -> Scenario:
             ActionStep(id=4, text="REPORT COMPLETE", next=None),
             TerminalStep(id=99, text="WRONG"),
         )),
-        action_expected_modes={},
+        action_expected_modes=MappingProxyType({}),
     )
 
 
@@ -82,6 +84,6 @@ def familiarization_scenario() -> Scenario:
         trigger_cues=(),
         linear_checklist=LinearChecklist(title="P", steps=("ACK PRACTICE ALERT",)),
         branching_checklist=BranchingChecklist(title="P", steps=()),
-        action_expected_modes={},
+        action_expected_modes=MappingProxyType({}),
         is_familiarization=True,
     )

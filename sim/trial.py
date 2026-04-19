@@ -236,11 +236,6 @@ def maybe_auto_transition() -> None:
             _finalize_trial(e)
 
 
-def tick_timer() -> None:
-    # tick() already handles timeout
-    maybe_auto_transition()
-
-
 # ----- Persistence -----------------------------------------------
 
 def _finalize_trial(engine: TrialEngine) -> None:

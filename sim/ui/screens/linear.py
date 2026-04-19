@@ -58,7 +58,7 @@ def _render_linear_picker() -> None:
             st.markdown(steps_html, unsafe_allow_html=True)
         if st.button(
             f"Use Checklist {cand.scenario_id}",
-            key=f"pick_{cand.scenario_id}",
+            key=f"checklist_pick_{cand.scenario_id}",
             use_container_width=True,
         ):
             select_linear_checklist(cand.scenario_id)
@@ -70,6 +70,8 @@ def _render_linear_progress() -> None:
     if picked is None:
         return
     scenario = current_scenario()
+    if scenario is None:
+        return
     is_correct_pick = selected_checklist_id() == scenario.id
 
     render_section_header(

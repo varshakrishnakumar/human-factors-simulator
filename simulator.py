@@ -12,7 +12,6 @@ from sim.trial import (
     checklist_type,
     finished,
     maybe_auto_transition,
-    tick_timer,
     trial_started,
 )
 from sim.ui.screens import (
@@ -41,14 +40,13 @@ def main() -> None:
     sidebar.render()
     masthead.render()
 
-    if not st.session_state.session_started:
+    if not session().session_started:
         intro.render()
         st.stop()
 
     _auto_refresh_if_running()
 
     maybe_auto_transition()
-    tick_timer()
 
     if finished() and not session().session_finished:
         # Familiarization: give the subject a moment to start real trials manually.

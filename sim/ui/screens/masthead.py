@@ -1,13 +1,13 @@
 import streamlit as st
 
 from sim.domain.conditions import CONDITIONS
-from sim.trial import current_trial_number, total_trials
+from sim.trial import current_trial_number, in_familiarization, total_trials
 from sim.ui.widgets import esc
 
 
 def render() -> None:
     participant = st.session_state.participant_id or "—"
-    if st.session_state.in_familiarization:
+    if in_familiarization():
         trial_value = "Practice"
     elif st.session_state.session_started:
         trial_value = f"{current_trial_number()} / {total_trials()}"

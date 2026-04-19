@@ -99,5 +99,7 @@ def render() -> None:
                 + '</div>',
                 unsafe_allow_html=True,
             )
+        # Note: BranchingStep is Union[ActionStep, DecisionStep, TerminalStep].
+        # If a new step type is added to the union, extend the dispatch here.
 
     st.markdown('</div>', unsafe_allow_html=True)
