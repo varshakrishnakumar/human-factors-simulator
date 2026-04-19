@@ -52,12 +52,12 @@
 | `sim/io/_sheets.py` | gspread plumbing extracted | Create |
 | `sim/state.py` | Phase-scoped dataclasses + bridge | Rewrite |
 | `sim/trial.py` | Shrinks to bridge calls | Rewrite |
-| `sim/scenarios.py` | DELETED (after step 7) | Delete |
-| `sim/config.py` | DELETED (after step 5) | Delete |
-| `sim/components.py` | DELETED (after step 6) | Delete |
-| `sim/styles.py` | DELETED (after step 6) | Delete |
-| `sim/sinks.py` | DELETED (after step 5) | Delete |
-| `sim/views.py` | DELETED (after step 6) | Delete |
+| `sim/scenarios.py` | Shim, then deleted in Task 7 | Modify → Delete |
+| `sim/config.py` | Shrunk in Task 3, deleted in Task 5 | Modify → Delete |
+| `sim/components.py` | Moved to `sim/ui/widgets.py` in Task 6 | git mv |
+| `sim/styles.py` | Moved to `sim/ui/styles.py` in Task 6 | git mv |
+| `sim/sinks.py` | Moved/split into `sim/io/` in Task 5 | Split → Delete original |
+| `sim/views.py` | Split into `sim/ui/screens/` in Task 6 | Split → Delete original |
 | `simulator.py` | Imports updated | Modify |
 | `requirements-dev.txt` | New | Create |
 | `tests/__init__.py` | Package marker | Create |
@@ -1590,6 +1590,54 @@ def test_branching_wrong_decision_hits_terminal(ctx, condition_branching, branch
 
 Run and verify PASS.
 
+- [ ] **Step 4.9b: Branching retry loop (wrong decision with `next` pointing back)**
+
+Append to `test_engine.py`:
+
+```python
+def test_branching_wrong_decision_can_loop_back(ctx, condition_branching):
+    """When a wrong-but-non-terminal decision routes back to an earlier step,
+    branch_decision_errors increments AND the path resumes — engine does NOT finish."""
+    from sim.domain.models import (
+        ActionStep, AutoTransition, BranchingChecklist, DecisionOption,
+        DecisionStep, LinearChecklist, Scenario, TriggerCue,
+    )
+    scenario = Scenario(
+        id=10, title="Retry", fault="F", initial_mode="AUTO",
+        auto_transition=AutoTransition(time=99999, new_mode="AUTO"),
+        correct_mode="AUTO",
+        trigger_cues=(TriggerCue("a", "b"),),
+        linear_checklist=LinearChecklist(title="L", steps=()),
+        branching_checklist=BranchingChecklist(title="B", steps=(
+            ActionStep(id=1, text="A1", next=2),
+            DecisionStep(id=2, prompt="Done?", options=(
+                DecisionOption(label="yes", next=3, correct=True),
+                DecisionOption(label="no, retry", next=1, correct=False),
+            )),
+            ActionStep(id=3, text="REPORT", next=None),
+        )),
+        action_expected_modes={},
+    )
+    engine = TrialEngine(scenario, condition_branching, ctx, start_time=0.0)
+    engine.execute_action("A1", now=1.0)
+    # At decision step — pick wrong option, which loops back to step 1
+    engine.submit_decision(1, now=2.0)
+    assert not engine.is_finished()
+    assert engine.branch_decision_errors == 1
+    assert engine.branch_step_id == 1  # routed back
+    assert engine.branch_path[-1] == 2  # decision step recorded in path
+    # Second attempt: execute A1 again, pick correct option
+    engine.execute_action("A1", now=3.0)
+    engine.submit_decision(0, now=4.0)
+    engine.execute_action("REPORT", now=5.0)
+    assert engine.is_finished()
+    assert engine.end_reason() == "completed"
+    assert engine.branch_decision_errors == 1  # not re-incremented on correct pass
+```
+
+Run: `pytest tests/test_engine.py::test_branching_wrong_decision_can_loop_back -v`
+Expected: PASS.
+
 - [ ] **Step 4.10: Timeout**
 
 ```python
@@ -1957,7 +2005,12 @@ def tick_timer() -> None:
 # ----- Persistence -----------------------------------------------
 
 def _finalize_trial(engine: TrialEngine) -> None:
-    # Serialize events to frozen events schema
+    """Persist events + summary once per finished engine. Idempotent:
+    guarded by `engine._finalized` so repeat calls (from maybe_auto_transition
+    on subsequent reruns while the engine is still the current one) are no-ops."""
+    if getattr(engine, "_finalized", False):
+        return
+    engine._finalized = True  # set BEFORE persist so a crash-and-retry doesn't double-write
     rows = [_serialize_event(ev, engine) for ev in engine.event_log()]
     sink = persist("events", rows)
     st.session_state.data_sink = sink
