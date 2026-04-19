@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sim.domain.models import (
     ActionStep, BranchingStep, Condition, DecisionStep, EndReason,
-    LinearCandidate, LinearChecklist, Scenario, TerminalStep, TrialContext,
+    LinearChecklist, Scenario, TerminalStep, TrialContext,
     TrialEvent, TrialResult,
 )
 from sim.domain.scenarios.registry import linear_candidates
@@ -131,7 +131,7 @@ class TrialEngine:
             self._finish(reason, now)
 
     def execute_action(self, action: str, now: float) -> None:
-        if self._finished or self.scenario is None:
+        if self._finished:
             return
         prev_mode = self.mode
 
@@ -168,6 +168,9 @@ class TrialEngine:
         if action not in self.completed_actions:
             self.completed_actions.append(action)
 
+        # Special-case: the only action that directly changes mode today. If future
+        # scenarios add other mode-switching actions, generalize via a per-action
+        # mapping in Scenario.
         if action == "SELECT AUTO MODE":
             self.mode = "AUTO"
 

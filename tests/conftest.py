@@ -1,7 +1,5 @@
 """Shared fixtures for engine/scoring tests. Build minimal scenarios inline
 instead of importing the real ones — keeps tests readable and isolated."""
-from typing import Iterable
-
 import pytest
 
 from sim.domain.models import (
@@ -34,7 +32,7 @@ def condition_branching() -> Condition:
 @pytest.fixture
 def linear_scenario() -> Scenario:
     return Scenario(
-        id=1,
+        id=101,
         title="Test Linear",
         fault="Test fault",
         initial_mode="AUTO",
@@ -50,7 +48,7 @@ def linear_scenario() -> Scenario:
 @pytest.fixture
 def branching_scenario() -> Scenario:
     return Scenario(
-        id=2,
+        id=102,
         title="Test Branching",
         fault="Test fault",
         initial_mode="AUTO",

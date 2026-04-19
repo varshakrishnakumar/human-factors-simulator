@@ -37,9 +37,6 @@ def classify_end(engine: "TrialEngine", now: float) -> Optional[EndReason]:
     if isinstance(current, TerminalStep):
         return "wrong_branch"
     if engine.branch_step_id is None:
-        last = engine.branch_path[-1] if engine.branch_path else None
-        if last == 99:
-            return "wrong_branch"
         if engine.mode == scenario.correct_mode:
             return "completed"
         return "procedure_end"

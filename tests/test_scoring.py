@@ -22,3 +22,13 @@ def test_aggregate_errors_sums_all_four():
         branch_decision_errors=3, checklist_selection_error=1,
     )
     assert aggregate_errors(r) == 7
+
+
+def test_aggregate_errors_all_zero():
+    r = _make_result()
+    assert aggregate_errors(r) == 0
+
+
+def test_aggregate_errors_single_field():
+    r = _make_result(order_errors=3)
+    assert aggregate_errors(r) == 3
