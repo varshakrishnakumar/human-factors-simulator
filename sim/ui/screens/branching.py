@@ -1,7 +1,7 @@
 import streamlit as st
 
 from sim.trial import current_scenario, submit_branching_decision
-from sim.ui.widgets import esc, render_notice, render_section_header
+from sim.ui.widgets import esc, render_notice, render_practice_checklist, render_section_header
 
 
 def render() -> None:
@@ -12,8 +12,7 @@ def render() -> None:
     st.markdown('<div class="hf-checklist-panel">', unsafe_allow_html=True)
 
     if st.session_state.in_familiarization:
-        # Practice uses the linear practice renderer — branching screen should not
-        # be invoked during familiarization. Fall through safely.
+        render_practice_checklist(scenario)
         st.markdown('</div>', unsafe_allow_html=True)
         return
 

@@ -1,10 +1,8 @@
-from typing import Any, Dict
-
 import streamlit as st
 
 from sim.domain.scenarios.registry import linear_candidates
 from sim.trial import current_scenario, picked_linear_checklist, select_linear_checklist
-from sim.ui.widgets import esc, render_notice, render_section_header
+from sim.ui.widgets import esc, render_notice, render_practice_checklist, render_section_header
 
 
 def render() -> None:
@@ -15,7 +13,7 @@ def render() -> None:
     st.markdown('<div class="hf-checklist-panel">', unsafe_allow_html=True)
 
     if st.session_state.in_familiarization:
-        _render_practice_checklist(scenario)
+        render_practice_checklist(scenario)
         st.markdown('</div>', unsafe_allow_html=True)
         return
 
@@ -25,22 +23,6 @@ def render() -> None:
         _render_linear_progress()
 
     st.markdown('</div>', unsafe_allow_html=True)
-
-
-def _render_practice_checklist(scenario: Dict[str, Any]) -> None:
-    render_section_header("Practice", "Warm up before the real trials")
-    render_notice(
-        "This is a practice run. There is one step: click ACK PRACTICE ALERT on the "
-        "console to acknowledge. No timer, no scoring.",
-        "info",
-    )
-    step = scenario["linear_checklist"]["steps"][0]
-    done = step in st.session_state.completed_actions
-    css = "hf-step-done" if done else "hf-step-current"
-    st.markdown(
-        f'<div class="{css}">STEP 01 // {esc(step)}</div>',
-        unsafe_allow_html=True,
-    )
 
 
 def _render_linear_picker() -> None:
