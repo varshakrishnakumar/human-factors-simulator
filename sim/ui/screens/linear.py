@@ -1,3 +1,8 @@
+"""Right-column checklist panel for linear-condition trials. Shows the
+three-checklist picker first, then switches to step-progress view once the
+subject picks one. Also handles familiarization (delegating to
+render_practice_checklist). If you want to change what the picker cards show
+(e.g. add scenario descriptions), _render_linear_picker is the place."""
 import streamlit as st
 
 from sim.domain.scenarios.registry import linear_candidates

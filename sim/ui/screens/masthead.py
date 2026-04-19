@@ -1,3 +1,7 @@
+"""Top-of-page masthead bar showing participant, condition, and trial progress.
+Renders on every screen once a session has started. It reads from trial.py
+accessors rather than session_state directly so it stays decoupled from the
+state bridge."""
 import streamlit as st
 
 from sim.domain.conditions import CONDITIONS

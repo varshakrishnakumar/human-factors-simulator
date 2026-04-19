@@ -1,3 +1,6 @@
+"""End-of-session summary screen shown after the survey is submitted. Displays
+per-trial outcome badges (completed/timed out/wrong branch) and total error
+counts from all_summaries. The rocket animation fires once on page load."""
 from typing import Any, Dict, List
 
 import streamlit as st

@@ -1,4 +1,9 @@
-"""Google Sheets plumbing. Keep this file free of simulator-domain knowledge."""
+"""gspread plumbing — the leading underscore means only sinks.py should import
+from this. I isolated it here so that swapping the Sheets backend (credentials
+format, library version, etc.) is a single-file change that doesn't touch any
+domain or UI code. If gspread or the google-auth library isn't installed the
+import is silently swallowed and every _get_sheet_client() call returns None,
+causing sinks.py to fall back to CSV automatically."""
 from pathlib import Path
 from typing import Any, Dict, List
 

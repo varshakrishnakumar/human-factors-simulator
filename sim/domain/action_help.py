@@ -1,4 +1,6 @@
-"""Global action-help lookup. Keeps cross-scenario actions in one place."""
+"""Tooltip text for every console action button, indexed by action string.
+Keeping this in one dict means adding a new action only requires one extra line
+here — the console screen looks it up automatically via ACTION_HELP.get()."""
 from typing import Dict
 
 ACTION_HELP: Dict[str, str] = {

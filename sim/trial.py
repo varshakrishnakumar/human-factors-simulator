@@ -1,5 +1,9 @@
-"""Bridges Streamlit session_state <-> TrialEngine. The engine is pure;
-this file is the only place that touches st.session_state for trial flow."""
+"""Public API the UI calls for everything trial-related. I kept the function
+names the same as before the refactor so none of the screen files needed
+touching when I split views.py. Under the hood each function grabs the
+TrialEngine from session_state (key `trial_engine`), delegates to it, and
+writes any results back. The engine itself lives in domain/engine.py and knows
+nothing about Streamlit — this file is the seam between them."""
 import random
 import time
 import uuid
@@ -30,11 +34,15 @@ def _set_engine(engine: Optional[TrialEngine]) -> None:
 # ----- Accessors called by UI --------------------------------------
 
 def current_scenario() -> Optional[Scenario]:
+    """The active Scenario dataclass, or None if no engine is running yet."""
     e = _engine()
     return e.scenario if e else None
 
 
 def current_time_limit() -> int:
+    """The time limit (seconds) for the current trial. Familiarization uses a
+    generous fixed limit defined in conditions.py rather than the condition's
+    limit, since practice is unscored."""
     e = _engine()
     if e is None:
         return 60
@@ -44,11 +52,16 @@ def current_time_limit() -> int:
 
 
 def elapsed_time() -> float:
+    """Seconds elapsed since the current trial started, frozen at completion
+    time once the engine finishes."""
     e = _engine()
     return e.elapsed(time.time()) if e else 0.0
 
 
 def remaining_time() -> float:
+    """Seconds left on the countdown. Familiarization computes remaining time
+    from the fixed FAMILIARIZATION_TIME_LIMIT; real trials use the engine's own
+    remaining() which references the condition's time_limit."""
     e = _engine()
     if e is None:
         return 0.0
@@ -58,11 +71,16 @@ def remaining_time() -> float:
 
 
 def checklist_type() -> str:
+    """'linear' or 'branching' — pulled from the current condition. Defaults to
+    'linear' when no engine is loaded so the routing in simulator.py stays safe
+    before a session starts."""
     e = _engine()
     return e.condition.checklist_type if e else "linear"
 
 
 def current_trial_number() -> int:
+    """1-based trial number for display in the masthead. Returns 0 during
+    familiarization since the practice run is Trial 0 by convention."""
     e = _engine()
     if e is None:
         return 0
@@ -70,20 +88,32 @@ def current_trial_number() -> int:
 
 
 def total_trials() -> int:
+    """Total number of real trials in this session (the length of the randomised
+    trial_order list). The masthead shows `current / total`."""
     return len(st.session_state.get("trial_order", []))
 
 
 def action_expected_mode(action: str) -> Optional[str]:
+    """Which spacecraft mode the scenario expects before this action is
+    executed. Used by console.py to show a mode hint; the engine records a
+    wrong_mode_action when the mode doesn't match at execution time."""
     e = _engine()
     return e.scenario.action_expected_modes.get(action) if e else None
 
 
 def picked_linear_checklist() -> Optional[LinearChecklist]:
+    """Which linear checklist the subject picked for this trial. Delegates to
+    the engine's own picked_linear_checklist() — see domain/engine.py for the
+    short-circuit that avoids a registry lookup when the subject picked
+    correctly."""
     e = _engine()
     return e.picked_linear_checklist() if e else None
 
 
 def current_action_buttons() -> List[str]:
+    """The ordered list of action button labels to display on the console.
+    Changes based on condition type: for linear it's the picked checklist's
+    steps; for branching it's every action-type step across the procedure."""
     e = _engine()
     return list(e.current_action_buttons()) if e else []
 
@@ -133,6 +163,10 @@ def finished() -> bool:
 # ----- Session control --------------------------------------------
 
 def start_session() -> None:
+    """Kick off a new session: generate a session_id, randomise the trial
+    order, record the assignment to Sheets/CSV, then immediately start
+    familiarization. Everything downstream — trial indexing, summary
+    collection — assumes this has been called exactly once per page load."""
     st.session_state.session_started = True
     st.session_state.session_id = str(uuid.uuid4())[:8]
     scenarios = list(_get_scenarios())
@@ -173,6 +207,10 @@ def _start_familiarization() -> None:
 
 
 def start_real_trial(index: int) -> None:
+    """Create a fresh TrialEngine for real trial at `index` in the session's
+    trial_order list and install it into session_state. Clears the previous
+    engine and any leftover widget keys first so there's no state bleed between
+    trials."""
     reset_trial_state()
     st.session_state.trial_index = index
     st.session_state.in_familiarization = False
@@ -189,6 +227,10 @@ def start_real_trial(index: int) -> None:
 
 
 def advance_after_trial() -> None:
+    """Move to the next phase after the current engine finishes. After
+    familiarization this immediately starts real Trial 1; after real trials it
+    either starts the next trial or marks the session finished so simulator.py
+    routes to the survey screen."""
     e = _engine()
     if e and e.scenario.is_familiarization:
         st.session_state.did_familiarization = True
@@ -204,6 +246,8 @@ def advance_after_trial() -> None:
 # ----- Delegated mutations ----------------------------------------
 
 def execute_action(action: str) -> None:
+    """Forward an action button click to the engine, then persist if the
+    engine just finished. Called by console.py on every button press."""
     e = _engine()
     if not e:
         return
@@ -213,6 +257,9 @@ def execute_action(action: str) -> None:
 
 
 def submit_branching_decision(option_index: int) -> None:
+    """Forward a branching decision submission to the engine, then persist if
+    the engine finished. Called by branching.py when the subject clicks
+    'Submit decision'."""
     e = _engine()
     if not e:
         return
@@ -222,6 +269,9 @@ def submit_branching_decision(option_index: int) -> None:
 
 
 def select_linear_checklist(scenario_id: int) -> None:
+    """Record the subject's checklist selection in the engine (no auto-finish
+    here — the trial finishes only when all steps are done). Called by
+    linear.py when the subject clicks 'Use Checklist N'."""
     e = _engine()
     if not e:
         return
@@ -229,6 +279,9 @@ def select_linear_checklist(scenario_id: int) -> None:
 
 
 def maybe_auto_transition() -> None:
+    """Tick the engine's clock on every rerun so auto-transitions and timeouts
+    are caught even when the subject isn't clicking buttons. Called at the top
+    of simulator.py's main() on every rerun."""
     e = _engine()
     if e:
         e.tick(time.time())
@@ -272,6 +325,9 @@ def _serialize_event(ev: TrialEvent, engine: TrialEngine) -> Dict[str, Any]:
 
 
 def submit_session_survey(payload: Dict[str, Any]) -> None:
+    """Merge the NASA-TLX survey ratings into every trial summary row and
+    persist them as a single batch to the 'summaries' sheet/CSV. Called once
+    by survey.py when the subject clicks 'Submit survey'."""
     rows = []
     for summary in st.session_state.all_summaries:
         row = dict(summary)

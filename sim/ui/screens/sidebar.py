@@ -1,3 +1,7 @@
+"""Sidebar setup panel. Handles participant ID entry, experience selection,
+condition assignment (auto-balanced or manual), and the Start session button.
+The auto-balanced path calls sinks.balanced_condition() which reads from Sheets
+— if Sheets is down it gracefully falls back to the first condition key."""
 import streamlit as st
 
 from sim.domain.conditions import BACKGROUND_OPTIONS, CONDITIONS

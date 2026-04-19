@@ -1,4 +1,8 @@
-"""Condition catalog + pure balanced_condition. No I/O."""
+"""The condition catalog (the four 2x2 cells) and a pure balanced-assignment
+function. I kept this pure (no I/O) so it can be unit-tested without mocking
+Sheets. The I/O wrapper that reads real assignment counts lives in
+sim/io/sinks.py as balanced_condition() — sinks.py calls _pure_balanced_condition
+here after fetching counts from Sheets."""
 from typing import Dict, List, Optional, Tuple
 
 from sim.domain.models import Condition
@@ -46,9 +50,11 @@ def balanced_condition(
     counts: Dict[Tuple[str, str], int],
     condition_keys: List[str],
 ) -> str:
-    """Pick the condition with the fewest prior assignments for this experience.
-    Tie-breaker: lowest overall count for the condition; final tie-breaker: list order.
-    Falls back to the first condition when no data is available."""
+    """Pick the condition with the fewest prior assignments for this experience
+    level (first tie-breaker: lowest overall count for that condition; second
+    tie-breaker: list order). Falls back to the first condition key when
+    `counts` is empty. Called by sinks.balanced_condition() after it fetches
+    real counts from Sheets; also called directly by tests with fake counts."""
     if not condition_keys:
         return ""
     best_key: Optional[str] = None

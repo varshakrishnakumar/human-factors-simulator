@@ -1,3 +1,7 @@
+"""Streamlit rendering primitives shared across screen files. Nothing in here
+touches the engine or session_state — it's just HTML generators and a couple
+of color-lookup helpers. If you need a new reusable component that renders
+HTML (a badge, a card, a progress indicator), this is where it lives."""
 import html
 from typing import Any
 
@@ -33,6 +37,8 @@ def mode_glow(mode: str) -> str:
 
 
 def render_notice(message: str, tone: str = "info") -> None:
+    """Render a styled notice banner. `tone` maps to CSS classes:
+    info (blue), warn (amber), success (green), danger (red)."""
     st.markdown(
         f'<div class="hf-notice hf-notice-{esc(tone)}">{esc(message)}</div>',
         unsafe_allow_html=True,
@@ -84,6 +90,10 @@ def render_trigger_cues(cues) -> None:
 
 
 def render_live_timer(remaining: float, total: int) -> None:
+    """Render the countdown timer with a colour-coded fill bar. Red below 10s,
+    amber below 20s, blue otherwise. Not used by the current status_bar (which
+    inlines the same logic), but kept here for any screen that wants a
+    standalone timer block."""
     total_safe = max(total, 1)
     frac = max(0.0, min(1.0, remaining / total_safe))
     if remaining <= 10:

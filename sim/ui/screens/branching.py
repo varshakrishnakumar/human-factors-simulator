@@ -1,3 +1,8 @@
+"""Right-column checklist panel for branching-condition trials. Walks the full
+step list and renders each step type (action, decision, terminal) differently.
+Decision steps show a radio + submit button only when they're the current step.
+Terminal steps are hidden until the subject reaches them (wrong-branch path).
+Also handles familiarization via render_practice_checklist."""
 import streamlit as st
 
 from sim.domain.models import ActionStep, DecisionStep, TerminalStep

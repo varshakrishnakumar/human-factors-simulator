@@ -1,4 +1,13 @@
-"""Phase-scoped state bridge between Streamlit session_state and domain."""
+"""The only place in sim/ that directly reads or writes st.session_state for
+identity/session bookkeeping. Every other module in sim/ works through either
+the pure domain engine or the typed accessors in trial.py — nothing else should
+be calling st.session_state directly for these keys.
+
+I split state into two dataclasses so it's obvious which values are fixed for
+the whole session (IdentityState) versus which can change as the session
+progresses (SessionState). That distinction matters when you're debugging data:
+identity fields should be identical across every row for a participant; session
+fields describe where they are in the flow."""
 from dataclasses import asdict, dataclass, field
 from typing import List, Literal, Optional
 
@@ -7,6 +16,9 @@ import streamlit as st
 
 @dataclass
 class IdentityState:
+    """Participant-level constants set at session start and never mutated again.
+    These map directly onto the columns we need in every output row, so I kept
+    them together here rather than scattering them across trial.py."""
     participant_id: str = ""
     experience: str = "None"
     condition_key: Optional[str] = None
@@ -16,6 +28,10 @@ class IdentityState:
 
 @dataclass
 class SessionState:
+    """Mutable navigation state: where we are in the trial sequence, which
+    summaries have been collected, and whether we're in the fam / survey phase.
+    I keep this separate from IdentityState so trial.py can call session()
+    cheaply to check flow without pulling in identity fields it doesn't need."""
     session_started: bool = False
     trial_order: List[int] = field(default_factory=list)
     trial_index: int = 0
@@ -44,6 +60,10 @@ def init_state() -> None:
 
 
 def session() -> SessionState:
+    """Snapshot the relevant session keys out of st.session_state into a typed
+    dataclass. Callers get plain Python values — no st.session_state references
+    leak out — which makes the flow logic in simulator.py and trial.py easier to
+    read and unit-test."""
     return SessionState(**{k: st.session_state[k] for k in _SESSION_KEYS})
 
 

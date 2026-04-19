@@ -1,5 +1,12 @@
-"""Pure classification: is this trial over, and why?
-No Streamlit. No time.time(). Deterministic given engine state."""
+"""Decides whether a trial has ended and what the end reason is. I kept this
+separate from engine.py so data-team changes to "what counts as completed" live
+in exactly one file. For example, if we later add a partial-completion rule or
+change the wrong_branch condition, neither engine.py nor trial.py need editing.
+
+All functions here are pure: same inputs always give same output, no I/O, no
+clock reads. The engine calls classify_end() after every mutation to check
+whether to call _finish(). aggregate_errors() is a convenience used by the
+summary screen and tests to total all error types."""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
@@ -11,6 +18,9 @@ if TYPE_CHECKING:
 
 
 def classify_end(engine: "TrialEngine", now: float) -> Optional[EndReason]:
+    """Check engine state and return an EndReason if the trial should end now,
+    or None to keep going. Timeout is checked first (highest priority), then
+    familiarization completion, then condition-specific rules."""
     scenario = engine.scenario
     condition = engine.condition
 
@@ -44,6 +54,9 @@ def classify_end(engine: "TrialEngine", now: float) -> Optional[EndReason]:
 
 
 def aggregate_errors(result: TrialResult) -> int:
+    """Sum of all error types for a finished trial. Used by summary.py for the
+    on-screen recap and available to analysis scripts that want a single error
+    count without reimplementing the addition."""
     return (
         result.order_errors
         + result.wrong_mode_actions

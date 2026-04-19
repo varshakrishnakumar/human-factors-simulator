@@ -1,3 +1,6 @@
+"""All CSS for the dark-themed simulator UI, injected once per rerun via
+inject_styles(). Keeping styles in one place means UI visual changes don't
+require touching any of the screen files."""
 import streamlit as st
 
 

@@ -1,3 +1,6 @@
+"""Pre-session briefing screen. Shown before any session starts. If you need
+to update participant instructions (study description, interface explanation,
+consent language), this is the only file to edit."""
 import streamlit as st
 
 from sim.ui.widgets import render_notice

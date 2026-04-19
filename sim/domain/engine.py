@@ -1,5 +1,13 @@
-"""Pure TrialEngine. No streamlit. No time.time(). Caller passes `now` for all
-time-dependent operations so tests can drive the clock."""
+"""Pure trial-lifecycle engine. I pulled this out of the old monolithic trial.py
+so we could unit-test scoring logic, action sequencing, and decision branching
+without needing a Streamlit session. The contract is: `now` (a float unix
+timestamp) is passed explicitly to every method that cares about time, so tests
+drive the clock via fixed floats and production passes `time.time()`.
+
+See domain/scoring.py for the end-reason rules — I kept those in a separate
+module so data-team tweaks to "what counts as completed" only touch one file.
+The bridge in sim/trial.py is the only caller in production; everything else
+that needs engine state goes through trial.py's typed accessor functions."""
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
@@ -14,6 +22,13 @@ from sim.domain import scoring
 
 
 class TrialEngine:
+    """Owns all mutable state for one trial run. Created fresh per trial by
+    trial.py's start_real_trial() / _start_familiarization(), stored in
+    session_state, and read back on every Streamlit rerun. The `_finalized`
+    flag (set by trial.py before persisting) stops the double-persist bug we'd
+    hit when maybe_auto_transition() was called on reruns after an engine had
+    already finished and been written."""
+
     def __init__(
         self,
         scenario: Scenario,
@@ -49,21 +64,35 @@ class TrialEngine:
 
     # ----- Time ---------------------------------------------------------
     def elapsed(self, now: float) -> float:
+        """Seconds since trial start, frozen at completion_time once finished.
+        Freezing it means the summary row always shows the actual task duration,
+        not the wall-clock time when result() was eventually called."""
         if self.completion_time is not None:
             return self.completion_time
         return max(0.0, now - self.start_time)
 
     def remaining(self, now: float) -> float:
+        """Seconds left before timeout. Zero once the trial ends."""
         return max(0.0, self.condition.time_limit - self.elapsed(now))
 
     # ----- State accessors ---------------------------------------------
     def is_finished(self) -> bool:
+        """True once _finish() has been called — checked by trial.py after every
+        mutation to decide whether to trigger persistence."""
         return self._finished
 
     def end_reason(self) -> Optional[EndReason]:
+        """The EndReason string, or None while the trial is still running.
+        Possible values are defined in models.py and documented in scoring.py."""
         return self._end_reason
 
     def picked_linear_checklist(self) -> Optional[LinearChecklist]:
+        """Which linear checklist the subject selected for this trial. If they
+        picked the checklist matching the true scenario I short-circuit to our
+        own scenario's linear_checklist — otherwise I look up whichever of the
+        three they chose from the registry. The short-circuit exists because test
+        fixtures with fabricated scenario ids were getting the wrong checklist
+        back when multiple scenarios happened to share an id in test data."""
         if self.selected_checklist_id is None:
             return None
         # If the user picked THIS scenario's checklist, always use self.scenario's
@@ -79,6 +108,9 @@ class TrialEngine:
         return None
 
     def current_branching_step(self) -> Optional[BranchingStep]:
+        """The branching step the subject is currently on, looked up by
+        branch_step_id. Returns None when branch_step_id is None (the procedure
+        has ended) so callers can use `isinstance` dispatch safely."""
         if self.branch_step_id is None:
             return None
         for s in self.scenario.branching_checklist.steps:
@@ -87,6 +119,11 @@ class TrialEngine:
         return None
 
     def current_action_buttons(self) -> Tuple[str, ...]:
+        """The ordered action labels that should appear as buttons on the
+        console. For familiarization this is always the practice checklist steps.
+        For linear conditions it's the picked checklist (empty tuple while
+        nothing is picked yet). For branching it's every action-type step in the
+        branching tree — decision steps don't produce console buttons."""
         if self.scenario.is_familiarization:
             return self.scenario.linear_checklist.steps
         if self.condition.checklist_type == "linear":
@@ -101,6 +138,8 @@ class TrialEngine:
         )
 
     def event_log(self) -> Tuple[TrialEvent, ...]:
+        """Immutable snapshot of the event list. Trial.py passes this to
+        persist() for the raw event rows."""
         return tuple(self._events)
 
     # ----- Mutations ---------------------------------------------------
@@ -117,6 +156,9 @@ class TrialEngine:
         return self.scenario.action_expected_modes.get(action)
 
     def tick(self, now: float) -> None:
+        """Called on every Streamlit rerun by maybe_auto_transition() in
+        trial.py. Handles the timed mode switch and timeout without needing any
+        button presses from the subject."""
         if self._finished:
             return
         # Auto-transition
@@ -131,6 +173,10 @@ class TrialEngine:
             self._finish(reason, now)
 
     def execute_action(self, action: str, now: float) -> None:
+        """Record a console button press: update wrong_mode_actions and
+        order_errors counters, advance the branching cursor if applicable,
+        append to completed_actions (deduped), and handle the SELECT AUTO MODE
+        special case. Checks for trial completion after every mutation."""
         if self._finished:
             return
         prev_mode = self.mode
@@ -185,6 +231,9 @@ class TrialEngine:
             self._finish(reason, now)
 
     def submit_decision(self, option_index: int, now: float) -> None:
+        """Record the subject's branch decision: increment branch_decision_errors
+        if wrong, advance branch_step_id to the chosen option's next step, and
+        check for completion."""
         if self._finished:
             return
         bs = self.current_branching_step()
@@ -202,6 +251,9 @@ class TrialEngine:
             self._finish(reason, now)
 
     def select_linear_checklist(self, scenario_id: int, now: float) -> None:
+        """Lock in the subject's checklist choice. Sets checklist_selection_error
+        if they picked the wrong scenario's checklist. This doesn't end the trial
+        — they still need to execute all the steps."""
         if self._finished or self.scenario.is_familiarization:
             return
         correct = scenario_id == self.scenario.id
@@ -224,6 +276,9 @@ class TrialEngine:
 
     # ----- Result -----------------------------------------------------
     def result(self) -> TrialResult:
+        """Build the flat TrialResult summary row. Only callable after the trial
+        finishes — raises RuntimeError otherwise to surface bugs where trial.py
+        might try to persist before the engine signals completion."""
         if not self._finished:
             raise RuntimeError("result() called before engine finished")
         return TrialResult(

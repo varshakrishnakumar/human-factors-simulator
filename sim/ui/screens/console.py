@@ -1,3 +1,7 @@
+"""Left-column console panel: trigger cues and action buttons. Renders during
+every trial (familiarization and real). The action buttons come from
+trial.current_action_buttons() — in linear conditions they only appear after
+the subject has picked a checklist, so the panel shows a prompt until then."""
 import streamlit as st
 
 from sim.domain.action_help import ACTION_HELP

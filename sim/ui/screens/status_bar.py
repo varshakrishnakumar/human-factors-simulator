@@ -1,3 +1,7 @@
+"""Sticky in-trial status bar showing time remaining, spacecraft mode, and
+active fault. Renders at the top of the console layout only while a trial is
+running. The colour coding (blue/amber/red) for the timer lives here; the same
+thresholds are used in widgets.render_live_timer() for consistency."""
 from sim.trial import current_mode, current_scenario, current_time_limit, in_familiarization, remaining_time, trial_started
 from sim.ui.widgets import esc, mode_color, mode_glow
 

@@ -1,5 +1,10 @@
-"""NASA-TLX questions as data. Render loop in sim/ui/screens/survey.py iterates
-over QUESTIONS; changing wording is a data edit here, not a UI edit."""
+"""NASA-TLX survey questions as a data constant. I moved them out of the UI
+screen so wording changes (anchor labels, question text, scale range) are a
+one-line edit here rather than hunting through render code. The render loop in
+sim/ui/screens/survey.py iterates over QUESTIONS without needing to know the
+content. If you want to add a new subscale, add a SurveyQuestion entry here and
+a matching key to COMMENT_KEYS — the survey screen handles the rest
+automatically."""
 from typing import Tuple
 
 from sim.domain.models import SurveyQuestion

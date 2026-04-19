@@ -1,3 +1,9 @@
+"""Entry point — Streamlit runs this file on every rerun. main() orchestrates
+the per-rerun flow: initialise state, inject styles, render sidebar and
+masthead, tick the engine clock, then route to the right screen based on where
+the session is in the lifecycle (intro → familiarization → trials → survey →
+summary). All the actual logic lives in sim/; this file just glues the screens
+together in the right order."""
 import streamlit as st
 
 try:
@@ -21,6 +27,10 @@ from sim.ui.screens import (
 
 
 def _auto_refresh_if_running() -> None:
+    """Enable 1-second auto-refresh only while a real (non-familiarization)
+    trial is actively running. We skip familiarization because it has no timer
+    and the constant rerun would be unnecessary. We also skip after finished()
+    to avoid hammering Streamlit once the engine has already persisted."""
     if st_autorefresh is None:
         return
     if not trial_started():
@@ -33,6 +43,11 @@ def _auto_refresh_if_running() -> None:
 
 
 def main() -> None:
+    """One call per Streamlit rerun. Sets up the page, ticks the engine,
+    and routes to the correct screen. The order matters: init_state() and
+    inject_styles() must come first; maybe_auto_transition() must run before
+    the finished() check so a timeout triggered on this rerun is handled
+    immediately rather than one rerun later."""
     st.set_page_config(page_title="Fault Recovery Experiment", layout="wide")
     init_state()
     inject_styles()

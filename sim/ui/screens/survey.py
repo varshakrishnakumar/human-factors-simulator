@@ -1,3 +1,8 @@
+"""NASA-TLX workload survey screen shown after all trials finish. Iterates over
+the QUESTIONS constant from domain/survey.py so adding a new subscale is a
+domain-data change, not a UI change. Comment boxes follow each slider; the
+submit button calls trial.submit_session_survey() which merges ratings with
+trial summaries and persists them."""
 import streamlit as st
 
 from sim.domain.survey import QUESTIONS
