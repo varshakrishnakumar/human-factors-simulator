@@ -1638,6 +1638,44 @@ def test_branching_wrong_decision_can_loop_back(ctx, condition_branching):
 Run: `pytest tests/test_engine.py::test_branching_wrong_decision_can_loop_back -v`
 Expected: PASS.
 
+- [ ] **Step 4.9c: Branching ends with wrong final mode → procedure_end**
+
+Append to `test_engine.py`:
+
+```python
+def test_branching_procedure_end_when_mode_wrong_at_finish(ctx, condition_branching):
+    """Branching that reaches next=None but ends in a mode other than
+    scenario.correct_mode classifies as procedure_end (not completed)."""
+    from sim.domain.models import (
+        ActionStep, AutoTransition, BranchingChecklist, LinearChecklist,
+        Scenario, TriggerCue,
+    )
+    scenario = Scenario(
+        id=11, title="Bad end", fault="F", initial_mode="AUTO",
+        # Force mode into HOLD early so we never hit correct_mode="AUTO".
+        auto_transition=AutoTransition(time=1, new_mode="HOLD"),
+        correct_mode="AUTO",
+        trigger_cues=(TriggerCue("a", "b"),),
+        linear_checklist=LinearChecklist(title="L", steps=()),
+        branching_checklist=BranchingChecklist(title="B", steps=(
+            ActionStep(id=1, text="A1", next=2),
+            ActionStep(id=2, text="A2", next=None),
+        )),
+        action_expected_modes={},
+    )
+    engine = TrialEngine(scenario, condition_branching, ctx, start_time=0.0)
+    # Tick past auto_transition time so mode becomes HOLD before finishing.
+    engine.tick(now=2.0)
+    assert engine.mode == "HOLD"
+    engine.execute_action("A1", now=3.0)
+    engine.execute_action("A2", now=4.0)
+    assert engine.is_finished()
+    assert engine.end_reason() == "procedure_end"
+```
+
+Run: `pytest tests/test_engine.py::test_branching_procedure_end_when_mode_wrong_at_finish -v`
+Expected: PASS.
+
 - [ ] **Step 4.10: Timeout**
 
 ```python
