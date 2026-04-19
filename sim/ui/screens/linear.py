@@ -1,7 +1,14 @@
 import streamlit as st
 
 from sim.domain.scenarios.registry import linear_candidates
-from sim.trial import current_scenario, picked_linear_checklist, select_linear_checklist
+from sim.trial import (
+    completed_actions,
+    current_scenario,
+    in_familiarization,
+    picked_linear_checklist,
+    select_linear_checklist,
+    selected_checklist_id,
+)
 from sim.ui.widgets import esc, render_notice, render_practice_checklist, render_section_header
 
 
@@ -12,12 +19,12 @@ def render() -> None:
 
     st.markdown('<div class="hf-checklist-panel">', unsafe_allow_html=True)
 
-    if st.session_state.in_familiarization:
+    if in_familiarization():
         render_practice_checklist(scenario)
         st.markdown('</div>', unsafe_allow_html=True)
         return
 
-    if st.session_state.selected_checklist_id is None:
+    if selected_checklist_id() is None:
         _render_linear_picker()
     else:
         _render_linear_progress()
@@ -63,11 +70,11 @@ def _render_linear_progress() -> None:
     if picked is None:
         return
     scenario = current_scenario()
-    is_correct_pick = picked["scenario_id"] == scenario["scenario_id"]
+    is_correct_pick = selected_checklist_id() == scenario.id
 
     render_section_header(
         "Executing",
-        f"Checklist {picked['scenario_id']} — {picked['title']}",
+        f"Checklist {selected_checklist_id()} — {picked.title}",
     )
     if not is_correct_pick:
         render_notice(
@@ -76,12 +83,13 @@ def _render_linear_progress() -> None:
             "warn",
         )
 
+    done = completed_actions()
     expected_step = next(
-        (s for s in picked["steps"] if s not in st.session_state.completed_actions),
+        (s for s in picked.steps if s not in done),
         None,
     )
-    for i, step in enumerate(picked["steps"], start=1):
-        if step in st.session_state.completed_actions:
+    for i, step in enumerate(picked.steps, start=1):
+        if step in done:
             css = "hf-step-done"
         elif step == expected_step:
             css = "hf-step-current"

@@ -9,7 +9,7 @@ import streamlit as st
 
 from sim.domain.conditions import CONDITIONS, FAMILIARIZATION_TIME_LIMIT, NUM_REAL_TRIALS
 from sim.domain.engine import TrialEngine
-from sim.domain.models import Condition, Scenario, TrialContext, TrialEvent, TrialResult
+from sim.domain.models import Condition, LinearChecklist, Scenario, TrialContext, TrialEvent, TrialResult
 from sim.domain.scenarios.registry import get_all as _get_scenarios, get_by_id, get_familiarization
 from sim.io.sinks import persist, record_assignment
 from sim.state import reset_trial_state
@@ -25,54 +25,13 @@ def _engine() -> Optional[TrialEngine]:
 
 def _set_engine(engine: Optional[TrialEngine]) -> None:
     st.session_state[_ENGINE_KEY] = engine
-    _mirror_to_session_state(engine)
-
-
-def _mirror_to_session_state(engine: Optional[TrialEngine]) -> None:
-    """TEMPORARY compat: mirror engine state to the legacy flat session_state
-    keys that sim/views.py (and the pre-Task-7 screens) still read directly.
-    Removed in Task 7 when screens cut over to engine/state accessors."""
-    if engine is None:
-        st.session_state.trial_started = False
-        st.session_state.finished = False
-        st.session_state.mode = None
-        st.session_state.scenario = None
-        st.session_state.completed_actions = []
-        st.session_state.selected_checklist_id = None
-        st.session_state.checklist_selection_error = False
-        st.session_state.branch_step_id = None
-        st.session_state.branch_path = []
-        st.session_state.wrong_mode_actions = 0
-        st.session_state.order_errors = 0
-        st.session_state.branch_decision_errors = 0
-        st.session_state.start_time = None
-        st.session_state.completion_time = None
-        st.session_state.end_reason = None
-        st.session_state.trial_event_rows = []
-        return
-    st.session_state.trial_started = True
-    st.session_state.finished = engine.is_finished()
-    st.session_state.mode = engine.mode
-    st.session_state.scenario = _scenario_to_dict(engine.scenario)
-    st.session_state.completed_actions = list(engine.completed_actions)
-    st.session_state.selected_checklist_id = engine.selected_checklist_id
-    st.session_state.checklist_selection_error = engine.checklist_selection_error
-    st.session_state.branch_step_id = engine.branch_step_id
-    st.session_state.branch_path = list(engine.branch_path)
-    st.session_state.wrong_mode_actions = engine.wrong_mode_actions
-    st.session_state.order_errors = engine.order_errors
-    st.session_state.branch_decision_errors = engine.branch_decision_errors
-    st.session_state.start_time = engine.start_time
-    st.session_state.completion_time = engine.completion_time
-    st.session_state.end_reason = engine.end_reason()
-    # trial_event_rows left empty under refactor — views.py doesn't read them
 
 
 # ----- Accessors called by UI --------------------------------------
 
-def current_scenario() -> Optional[Dict[str, Any]]:
+def current_scenario() -> Optional[Scenario]:
     e = _engine()
-    return _scenario_to_dict(e.scenario) if e else None
+    return e.scenario if e else None
 
 
 def current_time_limit() -> int:
@@ -119,19 +78,45 @@ def action_expected_mode(action: str) -> Optional[str]:
     return e.scenario.action_expected_modes.get(action) if e else None
 
 
-def picked_linear_checklist() -> Optional[Dict[str, Any]]:
+def picked_linear_checklist() -> Optional[LinearChecklist]:
     e = _engine()
-    if e is None:
-        return None
-    picked = e.picked_linear_checklist()
-    if picked is None:
-        return None
-    return {"scenario_id": e.selected_checklist_id, "title": picked.title, "steps": list(picked.steps)}
+    return e.picked_linear_checklist() if e else None
 
 
 def current_action_buttons() -> List[str]:
     e = _engine()
     return list(e.current_action_buttons()) if e else []
+
+
+# ----- New engine accessor functions for UI screens ---------------
+
+def current_mode() -> Optional[str]:
+    e = _engine()
+    return e.mode if e else None
+
+
+def selected_checklist_id() -> Optional[int]:
+    e = _engine()
+    return e.selected_checklist_id if e else None
+
+
+def completed_actions() -> List[str]:
+    e = _engine()
+    return list(e.completed_actions) if e else []
+
+
+def branch_step_id() -> Optional[int]:
+    e = _engine()
+    return e.branch_step_id if e else None
+
+
+def branch_path() -> List[int]:
+    e = _engine()
+    return list(e.branch_path) if e else []
+
+
+def in_familiarization() -> bool:
+    return bool(st.session_state.get("in_familiarization", False))
 
 
 # ----- Flags ------------------------------------------------------
@@ -223,7 +208,6 @@ def execute_action(action: str) -> None:
     if not e:
         return
     e.execute_action(action, now=time.time())
-    _mirror_to_session_state(e)
     if e.is_finished():
         _finalize_trial(e)
 
@@ -233,7 +217,6 @@ def submit_branching_decision(option_index: int) -> None:
     if not e:
         return
     e.submit_decision(option_index, now=time.time())
-    _mirror_to_session_state(e)
     if e.is_finished():
         _finalize_trial(e)
 
@@ -243,14 +226,12 @@ def select_linear_checklist(scenario_id: int) -> None:
     if not e:
         return
     e.select_linear_checklist(scenario_id, now=time.time())
-    _mirror_to_session_state(e)
 
 
 def maybe_auto_transition() -> None:
     e = _engine()
     if e:
         e.tick(time.time())
-        _mirror_to_session_state(e)
         if e.is_finished():
             _finalize_trial(e)
 
@@ -303,10 +284,3 @@ def submit_session_survey(payload: Dict[str, Any]) -> None:
         rows.append(row)
     persist("summaries", rows)
     st.session_state.session_survey_submitted = True
-
-
-# ----- Compat shim: dict view of scenario for existing views.py ---
-
-def _scenario_to_dict(s: Scenario) -> Dict[str, Any]:
-    from sim.scenarios import _scenario_to_dict as _to_dict  # reuse shim
-    return _to_dict(s)

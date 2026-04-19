@@ -1,14 +1,14 @@
-import streamlit as st
-
-from sim.trial import current_scenario, current_time_limit, remaining_time, trial_started
+from sim.trial import current_mode, current_scenario, current_time_limit, in_familiarization, remaining_time, trial_started
 from sim.ui.widgets import esc, mode_color, mode_glow
+
+import streamlit as st
 
 
 def render() -> None:
     scenario = current_scenario()
     if not scenario or not trial_started():
         return
-    if st.session_state.in_familiarization:
+    if in_familiarization():
         timer_html = ('<div class="hf-statusbar-cell"><div class="hf-statusbar-label">PRACTICE</div>'
                       '<div class="hf-statusbar-value" style="color:var(--hf-green);">No timer</div></div>')
     else:
@@ -29,7 +29,7 @@ def render() -> None:
             f'</div>'
         )
 
-    mode = st.session_state.mode or "—"
+    mode = current_mode() or "—"
     mode_html = (
         f'<div class="hf-statusbar-cell">'
         f'<div class="hf-statusbar-label">Mode</div>'
@@ -42,7 +42,7 @@ def render() -> None:
     fault_html = (
         f'<div class="hf-statusbar-cell hf-statusbar-fault">'
         f'<div class="hf-statusbar-label">Fault</div>'
-        f'<div class="hf-statusbar-value" style="font-size:0.95rem;">{esc(scenario["fault"])}</div>'
+        f'<div class="hf-statusbar-value" style="font-size:0.95rem;">{esc(scenario.fault)}</div>'
         f'</div>'
     )
 

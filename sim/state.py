@@ -1,77 +1,62 @@
+"""Phase-scoped state bridge between Streamlit session_state and domain."""
+from dataclasses import asdict, dataclass, field
+from typing import List, Literal, Optional, Tuple
+
 import streamlit as st
 
 
-_DEFAULTS = {
-    # Identity
-    "participant_id": "",
-    "experience": "None",
-    "session_started": False,
-    "session_id": None,
-    "condition_assignment_mode": "auto",  # "auto" (balanced) or "manual"
-    "condition_key": None,
-    # Trial flow
-    "trial_order": [],
-    "trial_index": 0,
-    "did_familiarization": False,
-    "in_familiarization": False,
-    "scenario": None,
-    "trial_started": False,
-    "start_time": None,
-    "completion_time": None,
-    "end_reason": None,
-    # Per-trial
-    "mode": None,
-    "completed_actions": [],
-    "wrong_mode_actions": 0,
-    "order_errors": 0,
-    "selected_checklist_id": None,
-    "checklist_selection_error": False,
-    "branch_step_id": 1,
-    "branch_path": [],
-    "branch_decision_errors": 0,
-    "finished": False,
-    "summary": None,
-    "trial_event_rows": [],
-    # Session-end
-    "all_summaries": [],
-    "session_survey_submitted": False,
-    "session_finished": False,
-    "data_sink": None,
-}
+@dataclass
+class IdentityState:
+    participant_id: str = ""
+    experience: str = "None"
+    condition_key: Optional[str] = None
+    assignment_mode: Literal["auto", "manual"] = "auto"
+    session_id: Optional[str] = None
+    session_started: bool = False
 
 
-_TRIAL_RESET_KEYS = {
-    "mode": None,
-    "completed_actions": [],
-    "wrong_mode_actions": 0,
-    "order_errors": 0,
-    "selected_checklist_id": None,
-    "checklist_selection_error": False,
-    "branch_step_id": 1,
-    "branch_path": [],
-    "branch_decision_errors": 0,
-    "finished": False,
-    "summary": None,
-    "trial_event_rows": [],
-    "trial_started": False,
-    "start_time": None,
-    "completion_time": None,
-    "end_reason": None,
-}
+@dataclass
+class SessionState:
+    trial_order: Tuple[int, ...] = ()
+    trial_index: int = 0
+    did_familiarization: bool = False
+    in_familiarization: bool = False
+    all_summaries: List[dict] = field(default_factory=list)
+    session_finished: bool = False
+    session_survey_submitted: bool = False
+    data_sink: Optional[str] = None
+
+
+_IDENTITY_KEYS = {f.name for f in IdentityState.__dataclass_fields__.values()}
+_SESSION_KEYS = {f.name for f in SessionState.__dataclass_fields__.values()}
 
 
 def init_state() -> None:
-    for key, value in _DEFAULTS.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
+    """Install default values for every session/identity field if missing.
+    Widget-state keys (tlx_*, branch_decision_*, checklist_pick_*) are managed
+    by Streamlit itself and not touched here."""
+    defaults = {**asdict(IdentityState()), **asdict(SessionState())}
+    # condition_assignment_mode is the legacy UI key used by sidebar.py; map from
+    # IdentityState.assignment_mode so both names stay consistent.
+    defaults["condition_assignment_mode"] = defaults.pop("assignment_mode")
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+
+
+def identity() -> IdentityState:
+    data = {k: st.session_state[k] for k in _IDENTITY_KEYS if k != "assignment_mode"}
+    data["assignment_mode"] = st.session_state.get("condition_assignment_mode", "auto")
+    return IdentityState(**data)
+
+
+def session() -> SessionState:
+    return SessionState(**{k: st.session_state[k] for k in _SESSION_KEYS})
 
 
 def reset_trial_state() -> None:
-    for key, value in _TRIAL_RESET_KEYS.items():
-        if isinstance(value, list):
-            st.session_state[key] = []
-        else:
-            st.session_state[key] = value
+    """Clear engine + dynamic widget keys. Called at trial transitions."""
+    st.session_state["trial_engine"] = None
     for key in list(st.session_state.keys()):
-        if key.startswith("branch_decision_") or key.startswith("checklist_pick_"):
+        if isinstance(key, str) and (key.startswith("branch_decision_") or key.startswith("checklist_pick_")):
             del st.session_state[key]
