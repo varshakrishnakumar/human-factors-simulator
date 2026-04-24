@@ -46,6 +46,30 @@ def test_linear_wrong_checklist_sets_error_flag(ctx, condition_linear, linear_sc
     assert not engine.is_finished()
 
 
+def test_linear_reselect_clears_pick_and_actions_but_not_error(ctx, condition_linear, linear_scenario):
+    """After a wrong pick, reset returns to the picker and clears completed_actions
+    so the next checklist starts fresh, but the error flag stays sticky."""
+    engine = TrialEngine(linear_scenario, condition_linear, ctx, start_time=0.0)
+    engine.select_linear_checklist(scenario_id=999, now=0.1)
+    engine.execute_action("A", now=0.5)
+    assert engine.completed_actions == ["A"]
+    engine.reset_checklist_selection(now=1.0)
+    assert engine.selected_checklist_id is None
+    assert engine.completed_actions == []
+    assert engine.checklist_selection_error is True  # sticky
+    # Re-pick correctly: error flag must remain True (we still want to record
+    # that the subject originally misdiagnosed).
+    engine.select_linear_checklist(linear_scenario.id, now=1.5)
+    assert engine.checklist_selection_error is True
+
+
+def test_linear_reset_no_op_when_nothing_picked(ctx, condition_linear, linear_scenario):
+    engine = TrialEngine(linear_scenario, condition_linear, ctx, start_time=0.0)
+    engine.reset_checklist_selection(now=0.1)
+    assert engine.selected_checklist_id is None
+    assert engine.checklist_selection_error is False
+
+
 def test_branching_correct_path_completes(ctx, condition_branching, branching_scenario):
     engine = TrialEngine(branching_scenario, condition_branching, ctx, start_time=0.0)
     engine.execute_action("ACK", now=1.0)

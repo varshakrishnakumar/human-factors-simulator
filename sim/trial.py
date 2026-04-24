@@ -278,6 +278,17 @@ def select_linear_checklist(scenario_id: int) -> None:
     e.select_linear_checklist(scenario_id, now=time.time())
 
 
+def reset_linear_checklist() -> None:
+    """Abandon the current linear-checklist pick so the picker reappears.
+    Called by linear.py when a subject on a wrong-pick clicks 'Reselect
+    checklist'. The original wrong pick stays recorded as an error in the
+    summary — see engine.reset_checklist_selection for the rationale."""
+    e = _engine()
+    if not e:
+        return
+    e.reset_checklist_selection(now=time.time())
+
+
 def maybe_auto_transition() -> None:
     """Tick the engine's clock on every rerun so auto-transitions and timeouts
     are caught even when the subject isn't clicking buttons. Called at the top

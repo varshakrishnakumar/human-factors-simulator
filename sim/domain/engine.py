@@ -253,17 +253,42 @@ class TrialEngine:
     def select_linear_checklist(self, scenario_id: int, now: float) -> None:
         """Lock in the subject's checklist choice. Sets checklist_selection_error
         if they picked the wrong scenario's checklist. This doesn't end the trial
-        — they still need to execute all the steps."""
+        — they still need to execute all the steps. The error flag is sticky:
+        once a wrong pick has happened in this trial, a later correct re-pick
+        does NOT clear it. We want the data to reflect that the subject ever
+        misdiagnosed, even if they recovered."""
         if self._finished or self.scenario.is_familiarization:
             return
         correct = scenario_id == self.scenario.id
         self.selected_checklist_id = scenario_id
-        self.checklist_selection_error = not correct
+        if not correct:
+            self.checklist_selection_error = True
         self._log(
             "CHECKLIST SELECTED",
             {"selected_id": scenario_id, "correct_id": self.scenario.id, "correct": correct},
             now=now,
         )
+
+    def reset_checklist_selection(self, now: float) -> None:
+        """Abandon the current linear-checklist pick so the subject can choose
+        again. Used when they realize they grabbed the wrong procedure mid-trial.
+        We keep checklist_selection_error sticky (the wrong pick still counts in
+        the data) and keep error counters as-is (those errors really happened),
+        but clear completed_actions so the new checklist starts at step 1 —
+        otherwise overlapping action labels like 'ACK ALARM' would show as
+        already-completed under the new procedure. Mode is left alone because
+        the spacecraft state evolves on the auto-transition timer regardless of
+        what checklist the subject is holding."""
+        if self._finished or self.scenario.is_familiarization:
+            return
+        if self.condition.checklist_type != "linear":
+            return
+        if self.selected_checklist_id is None:
+            return
+        prev_id = self.selected_checklist_id
+        self.selected_checklist_id = None
+        self.completed_actions = []
+        self._log("CHECKLIST DESELECTED", {"previous_id": prev_id}, now=now)
 
     def _finish(self, reason: EndReason, now: float) -> None:
         self.completion_time = self.elapsed(now)
