@@ -1,44 +1,9 @@
-from pathlib import Path
+"""Tooltip text for every console action button, indexed by action string.
+Keeping this in one dict means adding a new action only requires one extra line
+here — the console screen looks it up automatically via ACTION_HELP.get()."""
+from typing import Dict
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-LOG_DIR = BASE_DIR / "logs"
-
-GOOGLE_SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
-]
-
-CONDITIONS = {
-    "linear_high": {
-        "checklist_type": "linear",
-        "time_limit": 45,
-        "label": "Linear · High time pressure",
-    },
-    "linear_low": {
-        "checklist_type": "linear",
-        "time_limit": 90,
-        "label": "Linear · Low time pressure",
-    },
-    "branching_high": {
-        "checklist_type": "branching",
-        "time_limit": 45,
-        "label": "Branching · High time pressure",
-    },
-    "branching_low": {
-        "checklist_type": "branching",
-        "time_limit": 90,
-        "label": "Branching · Low time pressure",
-    },
-}
-
-BACKGROUND_OPTIONS = [
-    "None",
-    "Some aviation",
-    "Some spacecraft ops",
-    "Professional",
-]
-
-ACTION_HELP = {
+ACTION_HELP: Dict[str, str] = {
     "ACK ALARM": "Acknowledge the annunciated caution or warning.",
     "SILENCE CAUTION TONE": "Silence the audible tone after acknowledging the alarm.",
     "SELECT AUTO MODE": "Command the spacecraft back into AUTO mode.",
@@ -58,6 +23,3 @@ ACTION_HELP = {
     "CONFIRM GROUND LINK RESTORED": "Confirm the ground link is active and stable.",
     "ACK PRACTICE ALERT": "Acknowledge the practice alert to complete the warm-up.",
 }
-
-NUM_REAL_TRIALS = 3
-FAMILIARIZATION_TIME_LIMIT = 600

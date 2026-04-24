@@ -1,5 +1,9 @@
+"""Streamlit rendering primitives shared across screen files. Nothing in here
+touches the engine or session_state — it's just HTML generators and a couple
+of color-lookup helpers. If you need a new reusable component that renders
+HTML (a badge, a card, a progress indicator), this is where it lives."""
 import html
-from typing import Any, Dict, List
+from typing import Any
 
 import streamlit as st
 
@@ -33,6 +37,8 @@ def mode_glow(mode: str) -> str:
 
 
 def render_notice(message: str, tone: str = "info") -> None:
+    """Render a styled notice banner. `tone` maps to CSS classes:
+    info (blue), warn (amber), success (green), danger (red)."""
     st.markdown(
         f'<div class="hf-notice hf-notice-{esc(tone)}">{esc(message)}</div>',
         unsafe_allow_html=True,
@@ -70,13 +76,13 @@ def render_fault(fault: str) -> None:
     )
 
 
-def render_trigger_cues(cues: List[Dict[str, str]]) -> None:
+def render_trigger_cues(cues) -> None:
     if not cues:
         return
     inner = "".join(
         f'<div class="hf-cue">'
-        f'<div class="hf-cue-label">{esc(c["label"])}</div>'
-        f'<div class="hf-cue-value">{esc(c["value"])}</div>'
+        f'<div class="hf-cue-label">{esc(c.label)}</div>'
+        f'<div class="hf-cue-value">{esc(c.value)}</div>'
         f'</div>'
         for c in cues
     )
@@ -84,6 +90,10 @@ def render_trigger_cues(cues: List[Dict[str, str]]) -> None:
 
 
 def render_live_timer(remaining: float, total: int) -> None:
+    """Render the countdown timer with a colour-coded fill bar. Red below 10s,
+    amber below 20s, blue otherwise. Not used by the current status_bar (which
+    inlines the same logic), but kept here for any screen that wants a
+    standalone timer block."""
     total_safe = max(total, 1)
     frac = max(0.0, min(1.0, remaining / total_safe))
     if remaining <= 10:
@@ -122,5 +132,24 @@ def render_rocket_celebration() -> None:
         '<div class="hf-rocket">🚀</div>'
         '<div class="hf-rocket">🚀</div>'
         '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_practice_checklist(scenario) -> None:
+    """One-step practice checklist shown during familiarization, regardless of
+    the participant's assigned condition. Reads the Scenario dataclass directly."""
+    from sim.trial import completed_actions
+    render_section_header("Practice", "Warm up before the real trials")
+    render_notice(
+        "This is a practice run. There is one step: click ACK PRACTICE ALERT on the "
+        "console to acknowledge. No timer, no scoring.",
+        "info",
+    )
+    step = scenario.linear_checklist.steps[0]
+    done = step in completed_actions()
+    css = "hf-step-done" if done else "hf-step-current"
+    st.markdown(
+        f'<div class="{css}">STEP 01 // {esc(step)}</div>',
         unsafe_allow_html=True,
     )
