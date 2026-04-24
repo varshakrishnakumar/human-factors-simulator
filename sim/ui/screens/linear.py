@@ -11,6 +11,7 @@ from sim.trial import (
     current_scenario,
     in_familiarization,
     picked_linear_checklist,
+    reset_linear_checklist,
     select_linear_checklist,
     selected_checklist_id,
 )
@@ -85,10 +86,18 @@ def _render_linear_progress() -> None:
     )
     if not is_correct_pick:
         render_notice(
-            "Selected checklist does not match the actual fault. Selection is locked in; "
-            "the trial will continue with whatever procedure you chose.",
+            "Selected checklist does not match the actual fault. You may continue with "
+            "this procedure or reselect — the original wrong pick stays recorded as a "
+            "checklist selection error either way.",
             "warn",
         )
+        if st.button(
+            "Reselect checklist",
+            key="reselect_checklist",
+            use_container_width=True,
+        ):
+            reset_linear_checklist()
+            st.rerun()
 
     done = completed_actions()
     expected_step = next(

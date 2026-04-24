@@ -51,11 +51,13 @@ def render() -> None:
         is_current = sid == current_id
         label = f"STEP {sid:02d}"
 
+        # is_current wins over step_done so a re-routed step (e.g. decision sends
+        # you back to an earlier step) renders as current instead of green/done.
         if isinstance(step, ActionStep):
-            if step_done:
-                css = "hf-step-done"
-            elif is_current:
+            if is_current:
                 css = "hf-step-current"
+            elif step_done:
+                css = "hf-step-done"
             else:
                 css = "hf-step-upcoming"
             note_html = f'<span class="hf-step-note">{esc(step.note)}</span>' if step.note else ""
@@ -65,10 +67,10 @@ def render() -> None:
             )
 
         elif isinstance(step, DecisionStep):
-            if step_done:
-                css = "hf-step-done"
-            elif is_current:
+            if is_current:
                 css = "hf-step-current"
+            elif step_done:
+                css = "hf-step-done"
             else:
                 css = "hf-step-upcoming"
             options_html = "".join(
