@@ -343,7 +343,17 @@ def maybe_auto_transition() -> None:
 def _finalize_trial(engine: TrialEngine) -> None:
     """Persist events + summary once per finished engine. Idempotent:
     guarded by `engine._finalized` so repeat calls (from maybe_auto_transition
-    on subsequent reruns while the engine is still the current one) are no-ops."""
+    on subsequent reruns while the engine is still the current one) are no-ops.
+
+    Real trials get their summary written TWICE on purpose:
+      1. To 'trial_summaries' immediately on finish — durable per-trial record,
+         independent of whether the subject ever submits the workload survey.
+         Survives session-state loss between trials, browser-close before
+         survey, etc. No TLX columns yet.
+      2. To 'summaries' at session end via submit_session_survey(), with TLX
+         ratings merged in.
+    Analysts dedupe by (session_id, trial_number); 'summaries' is the canonical
+    post-TLX view, 'trial_summaries' is the rescue copy."""
     if getattr(engine, "_finalized", False):
         return
     engine._finalized = True  # set BEFORE persist so a crash-and-retry doesn't double-write
@@ -352,7 +362,21 @@ def _finalize_trial(engine: TrialEngine) -> None:
     st.session_state.data_sink = sink
     if not engine.scenario.is_familiarization:
         import dataclasses
-        st.session_state.all_summaries.append(dataclasses.asdict(engine.result()))
+        summary = dataclasses.asdict(engine.result())
+        # Surface the exact actions that triggered wrong-mode counts so the
+        # summary screen can explain to the subject WHICH presses were flagged.
+        # Without this they see a number with no narrative.
+        summary["wrong_mode_action_names"] = [
+            ev.action for ev in engine.event_log()
+            if ev.extra.get("wrong_mode")
+        ]
+        summary["order_error_attempts"] = [
+            ev.extra.get("attempted") for ev in engine.event_log()
+            if ev.action == "ORDER ERROR" and ev.extra.get("attempted")
+        ]
+        st.session_state.all_summaries.append(summary)
+        # Per-trial durable persist — see docstring above.
+        persist("trial_summaries", [_summary_for_sheet(summary)])
 
 
 def _serialize_event(ev: TrialEvent, engine: TrialEngine) -> Dict[str, Any]:
@@ -373,13 +397,26 @@ def _serialize_event(ev: TrialEvent, engine: TrialEngine) -> Dict[str, Any]:
     return row
 
 
+def _summary_for_sheet(summary: Dict[str, Any]) -> Dict[str, Any]:
+    """Flatten any list-valued fields in a summary dict into '; '-separated
+    strings so the row reads cleanly in Google Sheets / CSV. The in-memory
+    summary keeps the lists; only the persisted view is flattened."""
+    out: Dict[str, Any] = {}
+    for k, v in summary.items():
+        if isinstance(v, list):
+            out[k] = "; ".join(str(x) for x in v if x is not None)
+        else:
+            out[k] = v
+    return out
+
+
 def submit_session_survey(payload: Dict[str, Any]) -> None:
     """Merge the NASA-TLX survey ratings into every trial summary row and
     persist them as a single batch to the 'summaries' sheet/CSV. Called once
     by survey.py when the subject clicks 'Submit survey'."""
     rows = []
     for summary in st.session_state.all_summaries:
-        row = dict(summary)
+        row = _summary_for_sheet(summary)
         row.update(payload)
         rows.append(row)
     persist("summaries", rows)
