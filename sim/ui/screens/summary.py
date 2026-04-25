@@ -8,14 +8,43 @@ import streamlit as st
 from sim.ui.widgets import esc, render_notice, render_rocket_celebration, render_section_header
 
 
+def _gather_summaries() -> List[Dict[str, Any]]:
+    """Pull per-trial summaries from BOTH the all_summaries list and the
+    per-trial scalar keys (`summary_trial_<n>`). Streamlit's session_state
+    sometimes drops list-typed values back to their dataclass default between
+    trials but keeps individual scalar keys, so the per-key copies are the
+    rescue path. Merge by trial_number, prefer whichever copy exists."""
+    seen: Dict[int, Dict[str, Any]] = {}
+    for s in st.session_state.get("all_summaries", []) or []:
+        n = s.get("trial_number")
+        if n is not None:
+            seen[n] = s
+    for key in st.session_state.keys():
+        if not isinstance(key, str) or not key.startswith("summary_trial_"):
+            continue
+        try:
+            n = int(key[len("summary_trial_"):])
+        except ValueError:
+            continue
+        if n not in seen:
+            seen[n] = st.session_state[key]
+    return [seen[n] for n in sorted(seen.keys())]
+
+
 def render() -> None:
     render_rocket_celebration()
     st.markdown('<div class="hf-console-panel">', unsafe_allow_html=True)
     render_section_header("Session complete", "Thanks for participating")
 
-    summaries: List[Dict[str, Any]] = st.session_state.all_summaries
+    summaries: List[Dict[str, Any]] = _gather_summaries()
     if not summaries:
-        render_notice("No trial summaries recorded.", "warn")
+        render_notice(
+            "No trial summaries available to display on this screen, but your "
+            "trial data was written to the experiment data sheet as each trial "
+            "ended. (This screen reads from in-session memory, which can drop "
+            "between trials on hosted Streamlit.) Nothing to do — you're done.",
+            "warn",
+        )
     else:
         for s in summaries:
             tone, label = {

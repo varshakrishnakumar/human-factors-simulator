@@ -199,6 +199,11 @@ def start_session() -> None:
     st.session_state.trial_order = random.sample([s.id for s in scenarios], n)
     st.session_state.trial_index = 0
     st.session_state.all_summaries = []
+    # Drop per-trial scalar fallbacks from any previous session so the summary
+    # screen doesn't pick them up after a fresh start_session.
+    for key in [k for k in st.session_state.keys()
+                if isinstance(k, str) and k.startswith("summary_trial_")]:
+        del st.session_state[key]
     st.session_state.session_finished = False
     st.session_state.session_survey_submitted = False
 
@@ -385,6 +390,12 @@ def _finalize_trial(engine: TrialEngine) -> None:
         # bug we're working around), the sheet is still complete; only the
         # screen will be incomplete.
         st.session_state.all_summaries.append(summary)
+        # Belt-and-braces fallback for the summary screen: also stash each
+        # summary under its own per-trial scalar key. Streamlit's session_state
+        # has been observed to occasionally reset list-typed values back to
+        # their dataclass default ([]) between trials, but per-key scalars
+        # survive. summary.py reads from both sources and merges.
+        st.session_state[f"summary_trial_{engine.context.trial_number}"] = summary
 
 
 def _serialize_event(ev: TrialEvent, engine: TrialEngine) -> Dict[str, Any]:
