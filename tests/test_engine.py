@@ -100,6 +100,46 @@ def test_end_trial_records_self_terminated(ctx, condition_linear, linear_scenari
     assert result.end_reason == "self_terminated"
 
 
+def test_auto_transition_does_not_refire_after_select_auto_mode(ctx, condition_branching):
+    """Regression for the 'two phantom wrong_mode_actions per trial' bug:
+    once the auto-transition has fired (mode AUTO -> SAFE/HOLD), tick() must
+    NOT fire it again later — even when the subject legitimately changes mode
+    back to AUTO via SELECT AUTO MODE near the end of the procedure. Without
+    the latch, every subsequent AUTO-expecting action would falsely be flagged
+    wrong_mode because the engine kept yanking mode back to the scenario's
+    auto_transition target on each rerun."""
+    from sim.domain.models import (
+        ActionStep, AutoTransition, BranchingChecklist, LinearChecklist,
+        Scenario, TriggerCue,
+    )
+    scenario = Scenario(
+        id=20, title="Tick Latch", fault="F", initial_mode="AUTO",
+        auto_transition=AutoTransition(time=5, new_mode="SAFE"),
+        correct_mode="AUTO",
+        trigger_cues=(TriggerCue("a", "b"),),
+        linear_checklist=LinearChecklist(title="L", steps=()),
+        branching_checklist=BranchingChecklist(title="B", steps=(
+            ActionStep(id=1, text="SELECT AUTO MODE", next=2),
+            ActionStep(id=2, text="VERIFY ATTITUDE STABLE", next=None),
+        )),
+        action_expected_modes=MappingProxyType({
+            "SELECT AUTO MODE": "SAFE",
+            "VERIFY ATTITUDE STABLE": "AUTO",
+        }),
+    )
+    engine = TrialEngine(scenario, condition_branching, ctx, start_time=0.0)
+    engine.tick(now=6.0)
+    assert engine.mode == "SAFE"  # auto-transition fired once
+    engine.execute_action("SELECT AUTO MODE", now=7.0)
+    assert engine.mode == "AUTO"  # subject moved spacecraft back to AUTO
+    engine.tick(now=8.0)
+    assert engine.mode == "AUTO"  # tick must NOT yank mode back to SAFE
+    engine.execute_action("VERIFY ATTITUDE STABLE", now=9.0)
+    assert engine.wrong_mode_actions == 0  # no phantom wrong-mode flags
+    assert engine.is_finished()
+    assert engine.end_reason() == "completed"
+
+
 def test_end_trial_after_finish_is_noop(ctx, condition_linear, linear_scenario):
     """A second end_trial call on an already-finished engine must NOT
     overwrite the original end reason."""

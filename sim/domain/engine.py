@@ -57,6 +57,7 @@ class TrialEngine:
         self.completion_time: Optional[float] = None
         self._end_reason: Optional[EndReason] = None
         self._finished = False
+        self._auto_transitioned = False
         self._events: List[TrialEvent] = []
         # Live cue state — starts as the scenario's static trigger_cues and
         # gets mutated by execute_action via the scenario's action_cue_effects
@@ -170,15 +171,25 @@ class TrialEngine:
     def tick(self, now: float) -> None:
         """Called on every Streamlit rerun by maybe_auto_transition() in
         trial.py. Handles the timed mode switch and timeout without needing any
-        button presses from the subject."""
+        button presses from the subject.
+
+        The auto-transition is LATCHED via _auto_transitioned. Without the
+        latch, the old condition `mode != at.new_mode` re-fires the transition
+        any time the mode drifts off target — including after the subject
+        legitimately presses SELECT AUTO MODE near the end of the procedure,
+        which would yank the mode back to SAFE/HOLD and cause every later
+        AUTO-expecting action (VERIFY ATTITUDE STABLE, REPORT PROCEDURE
+        COMPLETE) to be flagged wrong_mode. Two phantom wrong_mode_actions
+        per trial, exactly matching what we observed in the field."""
         if self._finished:
             return
-        # Auto-transition
         at = self.scenario.auto_transition
-        if self.elapsed(now) >= at.time and self.mode != at.new_mode:
-            old = self.mode
-            self.mode = at.new_mode
-            self._log("AUTO TRANSITION", {"from_mode": old, "to_mode": at.new_mode}, now=now)
+        if not self._auto_transitioned and self.elapsed(now) >= at.time:
+            self._auto_transitioned = True
+            if self.mode != at.new_mode:
+                old = self.mode
+                self.mode = at.new_mode
+                self._log("AUTO TRANSITION", {"from_mode": old, "to_mode": at.new_mode}, now=now)
         # Finish?
         reason = scoring.classify_end(self, now)
         if reason is not None:
