@@ -345,15 +345,18 @@ def _finalize_trial(engine: TrialEngine) -> None:
     guarded by `engine._finalized` so repeat calls (from maybe_auto_transition
     on subsequent reruns while the engine is still the current one) are no-ops.
 
-    Real trials get their summary written TWICE on purpose:
-      1. To 'trial_summaries' immediately on finish — durable per-trial record,
-         independent of whether the subject ever submits the workload survey.
-         Survives session-state loss between trials, browser-close before
-         survey, etc. No TLX columns yet.
-      2. To 'summaries' at session end via submit_session_survey(), with TLX
-         ratings merged in.
-    Analysts dedupe by (session_id, trial_number); 'summaries' is the canonical
-    post-TLX view, 'trial_summaries' is the rescue copy."""
+    Each real trial's summary is written DIRECTLY to the 'summaries' sheet on
+    finish — no in-memory buffering until the survey submits. The previous
+    design buffered every trial in `st.session_state.all_summaries` and only
+    flushed at survey-submit time, which lost data whenever Streamlit Cloud
+    reset the list-valued session_state field between trials (a fragility we
+    actually observed in the field — only the final trial survived).
+
+    NASA-TLX workload ratings now live in their own session-level
+    'session_workload' sheet, keyed by session_id. Analysts JOIN summaries to
+    workload on session_id to get a (trial × workload) view. This is cleaner
+    than the old TLX-merge: it gives one row per trial regardless of whether
+    the subject ever opens the survey, and one row per session for workload."""
     if getattr(engine, "_finalized", False):
         return
     engine._finalized = True  # set BEFORE persist so a crash-and-retry doesn't double-write
@@ -374,9 +377,14 @@ def _finalize_trial(engine: TrialEngine) -> None:
             ev.extra.get("attempted") for ev in engine.event_log()
             if ev.action == "ORDER ERROR" and ev.extra.get("attempted")
         ]
+        # Persist the row to the canonical 'summaries' sheet immediately —
+        # this is the durable record, independent of session_state survival.
+        persist("summaries", [_summary_for_sheet(summary)])
+        # Append to the in-memory list too so the end-of-session screen can
+        # still show per-trial cards. If session_state drops the list (the
+        # bug we're working around), the sheet is still complete; only the
+        # screen will be incomplete.
         st.session_state.all_summaries.append(summary)
-        # Per-trial durable persist — see docstring above.
-        persist("trial_summaries", [_summary_for_sheet(summary)])
 
 
 def _serialize_event(ev: TrialEvent, engine: TrialEngine) -> Dict[str, Any]:
@@ -411,13 +419,25 @@ def _summary_for_sheet(summary: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def submit_session_survey(payload: Dict[str, Any]) -> None:
-    """Merge the NASA-TLX survey ratings into every trial summary row and
-    persist them as a single batch to the 'summaries' sheet/CSV. Called once
-    by survey.py when the subject clicks 'Submit survey'."""
-    rows = []
-    for summary in st.session_state.all_summaries:
-        row = _summary_for_sheet(summary)
-        row.update(payload)
-        rows.append(row)
-    persist("summaries", rows)
+    """Persist the NASA-TLX workload ratings + open-text comments as one
+    session-level row to the 'session_workload' sheet, keyed by session_id and
+    participant_id. Analysts JOIN with the 'summaries' sheet on session_id to
+    get a per-trial view enriched with workload ratings.
+
+    Per-trial summaries themselves are persisted immediately on trial finish
+    by `_finalize_trial`, so this function no longer needs to flush a batch of
+    trial rows — that was the source of the 'only the last trial saved'
+    failure mode."""
+    session_id = st.session_state.get("session_id", "") or ""
+    participant_id = st.session_state.get("participant_id", "") or ""
+    experience = st.session_state.get("experience", "") or ""
+    condition_key = st.session_state.get("condition_key", "") or ""
+    workload_row: Dict[str, Any] = {
+        "session_id": session_id,
+        "participant_id": participant_id,
+        "experience": experience,
+        "condition": condition_key,
+    }
+    workload_row.update(payload)
+    persist("session_workload", [workload_row])
     st.session_state.session_survey_submitted = True
