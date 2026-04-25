@@ -80,7 +80,16 @@ def _append_sheet(name: str, rows: List[Dict[str, Any]]) -> bool:
     if ws is None:
         return False
     try:
-        row_headers = list(rows[0].keys())
+        # Collect keys from ALL rows, not just the first — events emitted in one
+        # batch have varying shapes (TRIAL START has minimal extras, DECISION
+        # has step_id/choice/correct, etc.) and dropping later-row keys silently
+        # corrupts the data.
+        seen: List[str] = []
+        for r in rows:
+            for k in r.keys():
+                if k not in seen:
+                    seen.append(k)
+        row_headers = seen
         existing = ws.row_values(1)
         if not existing:
             headers = row_headers
