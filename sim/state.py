@@ -67,9 +67,15 @@ def session() -> SessionState:
     return SessionState(**{k: st.session_state[k] for k in _SESSION_KEYS})
 
 
+_RESET_PREFIXES = ("branch_decision_", "checklist_pick_")
+_RESET_EXACT = {"end_trial_confirm"}
+
+
 def reset_trial_state() -> None:
     """Clear engine + dynamic widget keys. Called at trial transitions."""
     st.session_state["trial_engine"] = None
     for key in list(st.session_state.keys()):
-        if isinstance(key, str) and (key.startswith("branch_decision_") or key.startswith("checklist_pick_")):
+        if not isinstance(key, str):
+            continue
+        if key in _RESET_EXACT or any(key.startswith(p) for p in _RESET_PREFIXES):
             del st.session_state[key]

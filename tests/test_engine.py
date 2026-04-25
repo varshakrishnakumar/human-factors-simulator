@@ -70,6 +70,49 @@ def test_linear_reset_no_op_when_nothing_picked(ctx, condition_linear, linear_sc
     assert engine.checklist_selection_error is False
 
 
+def test_action_cue_effect_updates_live_panel(ctx, condition_linear, linear_scenario):
+    """Performing an action with a cue effect mutates the live cue panel.
+    Subjects need this feedback to make grounded decisions at decision steps."""
+    engine = TrialEngine(linear_scenario, condition_linear, ctx, start_time=0.0)
+    engine.select_linear_checklist(linear_scenario.id, now=0.1)
+    # Initial cues are the scenario defaults.
+    cues = {c.label: c.value for c in engine.current_cues()}
+    assert cues == {"MODE": "AUTO", "WIDGET": "FAULT"}
+    # Action B has a cue effect: WIDGET -> OK.
+    engine.mode = "HOLD"  # avoid the wrong-mode side path
+    engine.execute_action("B", now=1.0)
+    cues = {c.label: c.value for c in engine.current_cues()}
+    assert cues == {"MODE": "AUTO", "WIDGET": "OK"}
+
+
+def test_end_trial_records_self_terminated(ctx, condition_linear, linear_scenario):
+    """end_trial finishes the trial with end_reason='self_terminated' so the
+    summary distinguishes 'subject said done' from 'objectively complete'."""
+    engine = TrialEngine(linear_scenario, condition_linear, ctx, start_time=0.0)
+    engine.select_linear_checklist(linear_scenario.id, now=0.1)
+    engine.execute_action("A", now=1.0)
+    engine.end_trial(now=2.0)
+    assert engine.is_finished()
+    assert engine.end_reason() == "self_terminated"
+    result = engine.result()
+    assert result.completed is False
+    assert result.timed_out is False
+    assert result.end_reason == "self_terminated"
+
+
+def test_end_trial_after_finish_is_noop(ctx, condition_linear, linear_scenario):
+    """A second end_trial call on an already-finished engine must NOT
+    overwrite the original end reason."""
+    engine = TrialEngine(linear_scenario, condition_linear, ctx, start_time=0.0)
+    engine.select_linear_checklist(linear_scenario.id, now=0.1)
+    engine.execute_action("A", now=1.0)
+    engine.execute_action("B", now=2.0)  # wrong-mode is fine; mode stays AUTO=correct_mode
+    engine.execute_action("C", now=3.0)
+    assert engine.end_reason() == "completed"
+    engine.end_trial(now=4.0)
+    assert engine.end_reason() == "completed"  # unchanged
+
+
 def test_branching_correct_path_completes(ctx, condition_branching, branching_scenario):
     engine = TrialEngine(branching_scenario, condition_branching, ctx, start_time=0.0)
     engine.execute_action("ACK", now=1.0)
@@ -91,6 +134,29 @@ def test_branching_wrong_decision_hits_terminal(ctx, condition_branching, branch
     assert engine.is_finished()
     assert engine.end_reason() == "wrong_branch"
     assert engine.branch_decision_errors == 1
+
+
+def test_branching_action_click_at_decision_step_is_order_error(ctx, condition_branching, branching_scenario):
+    """Pressing a console action while a DecisionStep is pending must NOT
+    silently mutate completed_actions or mode. It records an ORDER ERROR and
+    short-circuits — the subject has to use the right-panel radio to advance.
+    Without this, console clicks at a decision step looked like 'nothing
+    happened' to the subject while quietly polluting the trial data."""
+    engine = TrialEngine(branching_scenario, condition_branching, ctx, start_time=0.0)
+    engine.execute_action("ACK", now=1.0)  # ActionStep id=1, advances to decision id=2
+    assert engine.branch_step_id == 2  # at decision now
+    # Click an action button at the decision — must NOT advance, NOT add to
+    # completed_actions, NOT change mode; must record an order error.
+    prev_completed = list(engine.completed_actions)
+    prev_mode = engine.mode
+    engine.execute_action("SELECT AUTO MODE", now=2.0)
+    assert engine.order_errors == 1
+    assert engine.completed_actions == prev_completed
+    assert engine.mode == prev_mode  # SELECT AUTO MODE did NOT flip mode behind the curtain
+    assert engine.branch_step_id == 2  # still at decision
+    # Decision still works afterward.
+    engine.submit_decision(0, now=3.0)
+    assert engine.branch_step_id == 3  # advanced past the decision
 
 
 def test_branching_wrong_decision_can_loop_back(ctx, condition_branching):
