@@ -7,13 +7,13 @@ nothing about Streamlit — this file is the seam between them."""
 import random
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import streamlit as st
 
 from sim.domain.conditions import CONDITIONS, FAMILIARIZATION_TIME_LIMIT, NUM_REAL_TRIALS
 from sim.domain.engine import TrialEngine
-from sim.domain.models import Condition, LinearChecklist, Scenario, TrialContext, TrialEvent, TrialResult
+from sim.domain.models import Condition, LinearChecklist, Scenario, TriggerCue, TrialContext, TrialEvent, TrialResult
 from sim.domain.scenarios.registry import get_all as _get_scenarios, get_by_id, get_familiarization
 from sim.io.sinks import persist, record_assignment
 from sim.state import reset_trial_state
@@ -143,6 +143,31 @@ def branch_step_id() -> Optional[int]:
 def branch_path() -> List[int]:
     e = _engine()
     return list(e.branch_path) if e else []
+
+
+def at_decision_step() -> bool:
+    """True iff the branching engine is sitting on a DecisionStep waiting for
+    the subject to choose. Used by console.py to disable action buttons while
+    a decision is pending — pressing them at that point is a procedural error,
+    and disabling makes that obvious instead of silently logging it."""
+    e = _engine()
+    if not e:
+        return False
+    from sim.domain.models import DecisionStep
+    return isinstance(e.current_branching_step(), DecisionStep)
+
+
+def current_trigger_cues() -> Tuple[TriggerCue, ...]:
+    """The live cue panel for the current trial. During a running trial this
+    reflects the engine's mutated cue state (recovery actions update individual
+    cues per scenario.action_cue_effects). Outside of a running trial we fall
+    back to the scenario's static initial cues so screens that render this
+    before/after a trial don't break."""
+    e = _engine()
+    if e is not None:
+        return e.current_cues()
+    scenario = current_scenario()
+    return scenario.trigger_cues if scenario else ()
 
 
 def in_familiarization() -> bool:
@@ -276,6 +301,19 @@ def select_linear_checklist(scenario_id: int) -> None:
     if not e:
         return
     e.select_linear_checklist(scenario_id, now=time.time())
+
+
+def end_trial_now() -> None:
+    """Subject-initiated trial end ('I'm done' button). Records end_reason
+    'self_terminated' and triggers persistence. Distinct from natural
+    'completed' so the analyst can tell who self-declared vs. who actually
+    satisfied the completion rules."""
+    e = _engine()
+    if not e:
+        return
+    e.end_trial(now=time.time())
+    if e.is_finished():
+        _finalize_trial(e)
 
 
 def reset_linear_checklist() -> None:

@@ -40,10 +40,13 @@ def linear_scenario() -> Scenario:
         initial_mode="AUTO",
         auto_transition=AutoTransition(time=99999, new_mode="AUTO"),
         correct_mode="AUTO",
-        trigger_cues=(TriggerCue("MODE", "AUTO"),),
+        trigger_cues=(TriggerCue("MODE", "AUTO"), TriggerCue("WIDGET", "FAULT")),
         linear_checklist=LinearChecklist(title="L", steps=("A", "B", "C")),
         branching_checklist=BranchingChecklist(title="B", steps=()),
         action_expected_modes=MappingProxyType({"B": "HOLD"}),
+        action_cue_effects=MappingProxyType({
+            "B": (("WIDGET", "OK"),),
+        }),
     )
 
 

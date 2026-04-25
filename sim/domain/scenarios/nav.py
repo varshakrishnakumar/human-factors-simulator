@@ -69,4 +69,12 @@ SCENARIO = Scenario(
         "VERIFY ATTITUDE STABLE": "AUTO",
         "REPORT PROCEDURE COMPLETE": "AUTO",
     }),
+    action_cue_effects=MappingProxyType({
+        "RESET NAVIGATION FILTER": (("NAV DATA", "RESETTING"),),
+        "REINITIALIZE STAR TRACKER": (
+            ("STAR TRACKER", "NOMINAL"),
+            ("NAV DATA", "VALID"),
+        ),
+        "CONFIRM NAVIGATION DATA RESTORED": (("NAV DATA", "VALID"),),
+    }),
 )

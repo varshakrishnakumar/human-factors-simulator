@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sim.domain.models import (
     ActionStep, BranchingStep, Condition, DecisionStep, EndReason,
-    LinearChecklist, Scenario, TerminalStep, TrialContext,
+    LinearChecklist, Scenario, TerminalStep, TriggerCue, TrialContext,
     TrialEvent, TrialResult,
 )
 from sim.domain.scenarios.registry import linear_candidates
@@ -58,6 +58,11 @@ class TrialEngine:
         self._end_reason: Optional[EndReason] = None
         self._finished = False
         self._events: List[TrialEvent] = []
+        # Live cue state — starts as the scenario's static trigger_cues and
+        # gets mutated by execute_action via the scenario's action_cue_effects
+        # table. Console.render reads from current_cues() so subjects see the
+        # spacecraft state respond to their recovery actions.
+        self._cues: List[TriggerCue] = list(scenario.trigger_cues)
 
         self._log("FAMILIARIZATION START" if scenario.is_familiarization else "TRIAL START",
                   {"trial_number": context.trial_number} if not scenario.is_familiarization else None)
@@ -142,6 +147,13 @@ class TrialEngine:
         persist() for the raw event rows."""
         return tuple(self._events)
 
+    def current_cues(self) -> Tuple[TriggerCue, ...]:
+        """The console's live cue values. Updates as the subject performs
+        recovery actions whose effects are listed in scenario.action_cue_effects.
+        UI reads this on every rerun so the panel reflects current state, not
+        the frozen initial fault values."""
+        return tuple(self._cues)
+
     # ----- Mutations ---------------------------------------------------
     def _log(self, action: str, extra: Optional[Dict[str, Any]] = None, now: Optional[float] = None) -> None:
         ts = self.elapsed(now if now is not None else self.start_time)
@@ -176,9 +188,27 @@ class TrialEngine:
         """Record a console button press: update wrong_mode_actions and
         order_errors counters, advance the branching cursor if applicable,
         append to completed_actions (deduped), and handle the SELECT AUTO MODE
-        special case. Checks for trial completion after every mutation."""
+        special case. Checks for trial completion after every mutation.
+
+        In branching mode, if a decision is currently pending the click is
+        recorded as an ORDER ERROR and short-circuited — we don't pollute
+        completed_actions or flip mode behind the subject's back. They have
+        to use the right-panel radio + Submit decision to advance."""
         if self._finished:
             return
+
+        if (not self.scenario.is_familiarization
+                and self.condition.checklist_type == "branching"):
+            pending = self.current_branching_step()
+            if isinstance(pending, DecisionStep):
+                self.order_errors += 1
+                self._log(
+                    "ORDER ERROR",
+                    {"attempted": action, "expected": "decision", "step_id": pending.id},
+                    now=now,
+                )
+                return
+
         prev_mode = self.mode
 
         expected_mode = self._action_expected_mode(action)
@@ -220,15 +250,43 @@ class TrialEngine:
         if action == "SELECT AUTO MODE":
             self.mode = "AUTO"
 
-        self._log(action, {
+        # Apply any cue effects this action defines. We do this even when the
+        # click is procedurally wrong (e.g. clicked out of order in linear): a
+        # button on a real console takes effect regardless of whether you were
+        # supposed to press it. The order_error counter already recorded the
+        # procedural deviation separately.
+        cue_extra = self._apply_cue_effects(action)
+
+        log_extra: Dict[str, Any] = {
             "wrong_mode": wrong_mode,
             "from_mode": prev_mode,
             "to_mode": self.mode,
-        }, now=now)
+        }
+        if cue_extra:
+            log_extra["cue_updates"] = cue_extra
+        self._log(action, log_extra, now=now)
 
         reason = scoring.classify_end(self, now)
         if reason is not None:
             self._finish(reason, now)
+
+    def _apply_cue_effects(self, action: str) -> List[Tuple[str, str]]:
+        """Mutate self._cues per the scenario's action_cue_effects table for
+        this action. Returns the list of (label, new_value) pairs actually
+        applied so the caller can log them. A label that's not present in the
+        cue panel is silently ignored — the scenario file can list speculative
+        effects without breaking if the cue panel is later trimmed."""
+        effects = self.scenario.action_cue_effects.get(action)
+        if not effects:
+            return []
+        applied: List[Tuple[str, str]] = []
+        for label, new_value in effects:
+            for i, c in enumerate(self._cues):
+                if c.label == label and c.value != new_value:
+                    self._cues[i] = TriggerCue(label=label, value=new_value)
+                    applied.append((label, new_value))
+                    break
+        return applied
 
     def submit_decision(self, option_index: int, now: float) -> None:
         """Record the subject's branch decision: increment branch_decision_errors
@@ -268,6 +326,16 @@ class TrialEngine:
             {"selected_id": scenario_id, "correct_id": self.scenario.id, "correct": correct},
             now=now,
         )
+
+    def end_trial(self, now: float) -> None:
+        """Subject-initiated trial end. Records end_reason='self_terminated' so
+        analysts can distinguish 'they declared they were done' from
+        'they actually completed every step in the right mode' (which uses
+        end_reason='completed'). Error counters and event log are preserved
+        as-is — whatever happened up to this point is the data."""
+        if self._finished:
+            return
+        self._finish("self_terminated", now)
 
     def reset_checklist_selection(self, now: float) -> None:
         """Abandon the current linear-checklist pick so the subject can choose

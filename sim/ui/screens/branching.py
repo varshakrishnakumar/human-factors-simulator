@@ -53,6 +53,9 @@ def render() -> None:
 
         # is_current wins over step_done so a re-routed step (e.g. decision sends
         # you back to an earlier step) renders as current instead of green/done.
+        # The "▶" marker is a redundant cue beyond the border-color change so
+        # subjects can't miss where the cursor is.
+        marker = "▶ " if is_current else ""
         if isinstance(step, ActionStep):
             if is_current:
                 css = "hf-step-current"
@@ -62,7 +65,7 @@ def render() -> None:
                 css = "hf-step-upcoming"
             note_html = f'<span class="hf-step-note">{esc(step.note)}</span>' if step.note else ""
             st.markdown(
-                f'<div class="{css}">{label} // {esc(step.text)}{note_html}</div>',
+                f'<div class="{css}">{marker}{label} // {esc(step.text)}{note_html}</div>',
                 unsafe_allow_html=True,
             )
 
@@ -82,19 +85,30 @@ def render() -> None:
                 for o in step.options
             )
             st.markdown(
-                f'<div class="{css}">{label} // DECISION: {esc(step.prompt)}{options_html}</div>',
+                f'<div class="{css}">{marker}{label} // DECISION: {esc(step.prompt)}{options_html}</div>',
                 unsafe_allow_html=True,
             )
 
             if is_current:
                 labels = [o.label for o in step.options]
-                key = f"branch_decision_{sid}"
-                choice = st.radio("Your choice", labels, key=key, label_visibility="collapsed")
-                if st.button(
+                # Key by visit count (path.count(sid) = how many times this
+                # decision has been submitted before). Each new visit gets a
+                # fresh widget so a stale "No" can't be re-submitted by accident.
+                visits = path.count(sid)
+                key = f"branch_decision_{sid}_v{visits}"
+                choice = st.radio(
+                    "Your choice", labels,
+                    key=key,
+                    index=None,
+                    label_visibility="collapsed",
+                )
+                submit_clicked = st.button(
                     "Submit decision",
-                    key=f"submit_decision_{sid}",
+                    key=f"submit_decision_{sid}_v{visits}",
                     use_container_width=True,
-                ):
+                    disabled=choice is None,
+                )
+                if submit_clicked and choice is not None:
                     idx = labels.index(choice)
                     submit_branching_decision(idx)
                     st.rerun()

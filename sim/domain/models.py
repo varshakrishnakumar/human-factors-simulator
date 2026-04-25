@@ -99,7 +99,14 @@ class Scenario:
     """All static data for one fault scenario. Frozen so the registry can hand
     out the same instance to every trial without fear of mutation. If you're
     adding a new scenario, see domain/scenarios/registry.py — you only need to
-    define a SCENARIO constant and add one line there."""
+    define a SCENARIO constant and add one line there.
+
+    `action_cue_effects` is the recovery-feedback table: for each action label,
+    one or more (cue_label, new_value) pairs that get applied to the live cue
+    panel when the action is performed. Without this the console shows the same
+    fault state forever and decision steps like 'Is the ground link active and
+    stable?' have no observable evidence behind them. Defaults to empty so
+    scenarios that opt out of dynamic cues stay frozen-state."""
     id: int
     title: str
     fault: str
@@ -110,6 +117,9 @@ class Scenario:
     linear_checklist: LinearChecklist
     branching_checklist: BranchingChecklist
     action_expected_modes: "MappingProxyType[str, str]"
+    action_cue_effects: "MappingProxyType[str, Tuple[Tuple[str, str], ...]]" = field(
+        default_factory=lambda: MappingProxyType({}),
+    )
     is_familiarization: bool = False
 
 
@@ -173,7 +183,7 @@ class TrialEvent:
     extra: Dict[str, Any] = field(default_factory=dict)
 
 
-EndReason = Literal["completed", "timeout", "wrong_branch", "procedure_end"]
+EndReason = Literal["completed", "timeout", "wrong_branch", "procedure_end", "self_terminated"]
 
 
 @dataclass

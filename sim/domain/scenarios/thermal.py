@@ -69,4 +69,9 @@ SCENARIO = Scenario(
         "VERIFY ATTITUDE STABLE": "AUTO",
         "REPORT PROCEDURE COMPLETE": "AUTO",
     }),
+    action_cue_effects=MappingProxyType({
+        "CYCLE RADIATOR BYPASS VALVE": (("RADIATOR", "CYCLED"),),
+        "ENGAGE BACKUP HEATER": (("THERMAL LOOP", "NOMINAL"),),
+        "CONFIRM THERMAL LOOP STABLE": (("THERMAL LOOP", "STABLE"),),
+    }),
 )

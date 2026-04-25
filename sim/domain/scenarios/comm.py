@@ -69,4 +69,9 @@ SCENARIO = Scenario(
         "VERIFY ATTITUDE STABLE": "AUTO",
         "REPORT PROCEDURE COMPLETE": "AUTO",
     }),
+    action_cue_effects=MappingProxyType({
+        "SWITCH TO BACKUP DOWNLINK": (("DOWNLINK", "BACKUP"),),
+        "REINITIALIZE RF TRANSCEIVER": (("RF TRANSCEIVER", "NOMINAL"),),
+        "CONFIRM GROUND LINK RESTORED": (("DOWNLINK", "ACTIVE"),),
+    }),
 )
