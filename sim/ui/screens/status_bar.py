@@ -13,8 +13,8 @@ def render() -> None:
     if not scenario or not trial_started():
         return
     if in_familiarization():
-        timer_html = ('<div class="hf-statusbar-cell"><div class="hf-statusbar-label">PRACTICE</div>'
-                      '<div class="hf-statusbar-value" style="color:var(--hf-green);">No timer</div></div>')
+        timer_html = ('<div class="hf-statusbar-cell"><div class="hf-statusbar-label">Trial 0</div>'
+                      '<div class="hf-statusbar-value" style="color:var(--hf-green);">Practice · no timer</div></div>')
     else:
         rem = int(remaining_time())
         total = max(current_time_limit(), 1)
@@ -36,10 +36,9 @@ def render() -> None:
     mode = current_mode() or "—"
     mode_html = (
         f'<div class="hf-statusbar-cell">'
-        f'<div class="hf-statusbar-label">Mode</div>'
-        f'<div class="hf-statusbar-value" '
-        f'style="background:{mode_color(mode)}; color:white; padding:0.25rem 0.6rem; border-radius:8px;'
-        f' box-shadow:0 0 18px {mode_glow(mode)}; display:inline-block;">{esc(mode)}</div>'
+        f'<div class="hf-statusbar-label">Current Mode</div>'
+        f'<div class="hf-mode-pill" style="--mode-color:{mode_color(mode)}; --mode-glow:{mode_glow(mode)};">'
+        f'<span class="hf-mode-pill-dot"></span><span>{esc(mode)}</span></div>'
         f'</div>'
     )
 

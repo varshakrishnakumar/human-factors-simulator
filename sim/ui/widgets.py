@@ -23,6 +23,30 @@ MODE_GLOWS = {
     "MANUAL": "rgba(69, 90, 100, 0.3)",
 }
 
+_CUE_DANGER_VALUES = {
+    "FAILED",
+    "INVALID",
+    "LOST",
+    "OVERTEMP",
+    "VALVE FAULT",
+    "SAFE",
+}
+_CUE_WARN_VALUES = {
+    "HOLD",
+    "DEGRADED",
+    "RESETTING",
+    "CYCLED",
+    "BACKUP",
+}
+_CUE_OK_VALUES = {
+    "AUTO",
+    "NOMINAL",
+    "VALID",
+    "STABLE",
+    "ACTIVE",
+    "OK",
+}
+
 
 def esc(value: Any) -> str:
     return html.escape(str(value))
@@ -34,6 +58,18 @@ def mode_color(mode: str) -> str:
 
 def mode_glow(mode: str) -> str:
     return MODE_GLOWS.get(mode, "rgba(148, 163, 184, 0.24)")
+
+
+def cue_tone(value: str) -> str:
+    """Map cue values to display status without coloring the whole panel."""
+    normalized = str(value).strip().upper()
+    if normalized in _CUE_DANGER_VALUES:
+        return "danger"
+    if normalized in _CUE_WARN_VALUES:
+        return "warn"
+    if normalized in _CUE_OK_VALUES:
+        return "ok"
+    return "neutral"
 
 
 def render_notice(message: str, tone: str = "info") -> None:
@@ -80,7 +116,7 @@ def render_trigger_cues(cues) -> None:
     if not cues:
         return
     inner = "".join(
-        f'<div class="hf-cue">'
+        f'<div class="hf-cue hf-cue-{cue_tone(c.value)}">'
         f'<div class="hf-cue-label">{esc(c.label)}</div>'
         f'<div class="hf-cue-value">{esc(c.value)}</div>'
         f'</div>'

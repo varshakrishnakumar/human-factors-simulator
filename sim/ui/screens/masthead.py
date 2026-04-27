@@ -12,7 +12,7 @@ from sim.ui.widgets import esc
 def render() -> None:
     participant = st.session_state.participant_id or "—"
     if in_familiarization():
-        trial_value = "Practice"
+        trial_value = "0 (Practice)"
     elif st.session_state.session_started:
         trial_value = f"{current_trial_number()} / {total_trials()}"
     else:

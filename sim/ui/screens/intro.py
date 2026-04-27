@@ -36,7 +36,7 @@ def render() -> None:
           <li>The <strong>blue-bordered Console</strong> on the left shows the fault, the
           spacecraft's current mode, the trigger cues that are currently annunciating,
           and all available action buttons.</li>
-          <li>The <strong>amber-bordered Checklist</strong> on the right shows the procedure
+          <li>The <strong>teal-bordered Checklist</strong> on the right shows the procedure
           you should be following. In linear trials you will see three candidate checklists
           and must pick the one that matches the trigger cues on the Console. In branching
           trials you will see one checklist with decision points — read each step carefully

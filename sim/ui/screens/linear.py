@@ -15,7 +15,7 @@ from sim.trial import (
     select_linear_checklist,
     selected_checklist_id,
 )
-from sim.ui.widgets import esc, render_notice, render_practice_checklist, render_section_header
+from sim.ui.widgets import cue_tone, esc, render_notice, render_practice_checklist, render_section_header
 
 
 def render() -> None:
@@ -44,15 +44,15 @@ def _render_linear_picker() -> None:
         "Match the console indications to one of the three checklists below.",
     )
     for cand in linear_candidates():
-        cues_html = " · ".join(
-            f'<span style="color:var(--hf-amber); font-family:SFMono-Regular,Menlo,Consolas,monospace;'
-            f' font-size:0.72rem; letter-spacing:0.1em;">{esc(c.label)}: {esc(c.value)}</span>'
+        cues_html = "".join(
+            f'<div class="hf-choice-cue hf-cue-{cue_tone(c.value)}">'
+            f'<span>{esc(c.label)}</span><strong>{esc(c.value)}</strong></div>'
             for c in cand.trigger_cues
         )
         st.markdown(
             f'<div class="hf-choice-card">'
             f'<div class="hf-choice-title">Checklist {cand.scenario_id} — {esc(cand.title)}</div>'
-            f'<div style="margin-bottom:0.3rem;">{cues_html}</div>'
+            f'<div class="hf-choice-cues">{cues_html}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -111,7 +111,12 @@ def _render_linear_progress() -> None:
             css = "hf-step-current"
         else:
             css = "hf-step-upcoming"
+        expected_mode = scenario.action_expected_modes.get(step)
+        mode_html = (
+            f'<span class="hf-step-mode">Mode {esc(expected_mode)}</span>'
+            if expected_mode else ""
+        )
         st.markdown(
-            f'<div class="{css}">STEP {i:02d} // {esc(step)}</div>',
+            f'<div class="{css}">STEP {i:02d} // {esc(step)}{mode_html}</div>',
             unsafe_allow_html=True,
         )

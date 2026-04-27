@@ -40,7 +40,7 @@ def render() -> None:
         if ct == "linear" and not in_familiarization():
             render_notice(
                 "Select a checklist on the right to enable the action buttons.",
-                "warn",
+                "info",
             )
     else:
         if decision_pending:

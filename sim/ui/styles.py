@@ -24,7 +24,8 @@ def inject_styles() -> None:
             --hf-orange: #fb923c;
             --hf-red: #fb4d3d;
             --hf-console-accent: #5fb4ff;
-            --hf-checklist-accent: #facc15;
+            --hf-checklist-accent: #2dd4bf;
+            --hf-info-accent: #7dd3fc;
         }
         .stApp {
             background:
@@ -71,7 +72,7 @@ def inject_styles() -> None:
             font-weight: 700;
             letter-spacing: 0.22em;
             text-transform: uppercase;
-            color: var(--hf-amber);
+            color: var(--hf-info-accent);
             margin-bottom: 0.1rem;
         }
         .hf-chip-row {
@@ -128,16 +129,16 @@ def inject_styles() -> None:
             border-radius: 10px;
         }
         .hf-checklist-panel {
-            border: 1px solid rgba(250, 204, 21, 0.3);
-            background: linear-gradient(180deg, rgba(30, 25, 10, 0.45), rgba(22, 18, 8, 0.5));
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(250, 204, 21, 0.06);
+            border: 1px solid rgba(45, 212, 191, 0.28);
+            background: linear-gradient(180deg, rgba(8, 24, 28, 0.58), rgba(7, 16, 24, 0.72));
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(45, 212, 191, 0.05);
         }
         .hf-checklist-panel::before {
             content: "CHECKLIST";
             position: absolute; top: -10px; left: 18px;
-            background: #181308;
-            border: 1px solid rgba(250, 204, 21, 0.5);
-            color: var(--hf-amber);
+            background: #07171c;
+            border: 1px solid rgba(45, 212, 191, 0.44);
+            color: var(--hf-checklist-accent);
             font-family: "SFMono-Regular", Menlo, Consolas, monospace;
             font-size: 0.68rem;
             letter-spacing: 0.26em;
@@ -217,20 +218,27 @@ def inject_styles() -> None:
             margin: 0.55rem 0 0.75rem;
         }
         .hf-cue {
+            --cue-color: var(--hf-info-accent);
+            position: relative;
             border-radius: 12px;
-            border: 1px solid rgba(250, 204, 21, 0.3);
-            background: rgba(43, 34, 11, 0.35);
+            border: 1px solid rgba(125, 211, 252, 0.24);
+            border-left: 4px solid var(--cue-color);
+            background: rgba(11, 22, 34, 0.62);
             padding: 0.45rem 0.6rem;
         }
+        .hf-cue-ok { --cue-color: var(--hf-green); }
+        .hf-cue-warn { --cue-color: var(--hf-amber); }
+        .hf-cue-danger { --cue-color: var(--hf-red); }
+        .hf-cue-neutral { --cue-color: var(--hf-info-accent); }
         .hf-cue-label {
-            color: rgba(250, 204, 21, 0.9);
+            color: rgba(125, 211, 252, 0.88);
             font-size: 0.6rem;
             letter-spacing: 0.22em;
             text-transform: uppercase;
             margin-bottom: 0.2rem;
         }
         .hf-cue-value {
-            color: var(--hf-text);
+            color: var(--cue-color);
             font-family: "SFMono-Regular", Menlo, Consolas, monospace;
             font-size: 0.88rem;
             font-weight: 700;
@@ -277,6 +285,30 @@ def inject_styles() -> None:
             font-weight: 700;
             color: #ffdcd7;
             text-transform: uppercase;
+        }
+        .hf-mode-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            width: fit-content;
+            border-radius: 8px;
+            border: 1px solid var(--mode-color);
+            background: rgba(10, 16, 25, 0.92);
+            color: var(--hf-text);
+            padding: 0.28rem 0.65rem;
+            box-shadow: 0 0 16px var(--mode-glow);
+            font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+            font-size: 1.05rem;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+        .hf-mode-pill-dot {
+            width: 0.65rem;
+            height: 0.65rem;
+            border-radius: 999px;
+            background: var(--mode-color);
+            box-shadow: 0 0 12px var(--mode-glow);
+            flex: 0 0 auto;
         }
 
         /* Timer */
@@ -331,6 +363,19 @@ def inject_styles() -> None:
         .hf-step-done    { border-color: rgba(74, 222, 128, 0.38); color: #dcfce7; }
         .hf-step-upcoming{ color: var(--hf-muted); }
         .hf-step-terminal{ border-color: rgba(251, 77, 61, 0.4); color: #ffe4e0; }
+        .hf-step-mode {
+            display: inline-block;
+            margin-left: 0.45rem;
+            border-radius: 999px;
+            border: 1px solid rgba(125, 211, 252, 0.26);
+            color: var(--hf-cyan);
+            background: rgba(8, 20, 30, 0.72);
+            padding: 0.08rem 0.35rem;
+            font-size: 0.68rem;
+            font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+            vertical-align: 0.08rem;
+            white-space: nowrap;
+        }
         .hf-step-note {
             display: block;
             margin-top: 0.3rem;
@@ -357,12 +402,37 @@ def inject_styles() -> None:
             opacity: 0.45;
         }
         .hf-choice-title {
-            color: var(--hf-amber);
+            color: var(--hf-checklist-accent);
             font-weight: 800;
             letter-spacing: 0.12em;
             text-transform: uppercase;
             margin-bottom: 0.4rem;
             font-size: 0.88rem;
+        }
+        .hf-choice-cues {
+            display: grid;
+            gap: 0.22rem;
+            margin-bottom: 0.3rem;
+        }
+        .hf-choice-cue {
+            --cue-color: var(--hf-info-accent);
+            border-left: 3px solid var(--cue-color);
+            padding-left: 0.5rem;
+            color: var(--hf-text);
+            font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+            font-size: 0.76rem;
+            line-height: 1.35;
+        }
+        .hf-choice-cue span {
+            display: inline-block;
+            min-width: 8.6rem;
+            color: var(--hf-muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .hf-choice-cue strong {
+            color: var(--cue-color);
+            font-weight: 800;
         }
         .hf-choice-step {
             color: var(--hf-text);
@@ -405,7 +475,7 @@ def inject_styles() -> None:
             margin-bottom: 0.5rem;
         }
         .hf-section-kicker {
-            color: var(--hf-amber);
+            color: var(--hf-info-accent);
             font-size: 0.68rem;
             letter-spacing: 0.22em;
             text-transform: uppercase;

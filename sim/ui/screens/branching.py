@@ -64,8 +64,13 @@ def render() -> None:
             else:
                 css = "hf-step-upcoming"
             note_html = f'<span class="hf-step-note">{esc(step.note)}</span>' if step.note else ""
+            expected_mode = scenario.action_expected_modes.get(step.text)
+            mode_html = (
+                f'<span class="hf-step-mode">Mode {esc(expected_mode)}</span>'
+                if expected_mode else ""
+            )
             st.markdown(
-                f'<div class="{css}">{marker}{label} // {esc(step.text)}{note_html}</div>',
+                f'<div class="{css}">{marker}{label} // {esc(step.text)}{mode_html}{note_html}</div>',
                 unsafe_allow_html=True,
             )
 
