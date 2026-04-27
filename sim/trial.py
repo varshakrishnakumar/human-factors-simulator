@@ -9,14 +9,31 @@ import time
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
-import streamlit as st
+try:
+    import streamlit as st
+except Exception:
+    class _MissingStreamlit:
+        """Fallback so pure bridge tests can import this module without Streamlit."""
+        session_state: Dict[str, Any] = {}
+
+        def __getattr__(self, name: str) -> Any:
+            raise RuntimeError("Streamlit is required to run the simulator UI")
+
+    st = _MissingStreamlit()
 
 from sim.domain.conditions import CONDITIONS, FAMILIARIZATION_TIME_LIMIT, NUM_REAL_TRIALS
 from sim.domain.engine import TrialEngine
 from sim.domain.models import Condition, LinearChecklist, Scenario, TriggerCue, TrialContext, TrialEvent, TrialResult
 from sim.domain.scenarios.registry import get_all as _get_scenarios, get_by_id, get_familiarization
 from sim.io.sinks import persist, record_assignment
-from sim.state import reset_trial_state
+try:
+    from sim.state import reset_trial_state
+except ModuleNotFoundError as exc:
+    if exc.name != "streamlit":
+        raise
+
+    def reset_trial_state() -> None:
+        st.session_state["trial_engine"] = None
 
 _ENGINE_KEY = "trial_engine"
 
@@ -365,18 +382,22 @@ def _finalize_trial(engine: TrialEngine) -> None:
     the subject ever opens the survey, and one row per session for workload."""
     if getattr(engine, "_finalized", False):
         return
+    # Latch before any network I/O. Streamlit can overlap reruns during a slow
+    # Sheets append; setting this after persist() leaves a window where the same
+    # finished engine can append the same summary twice.
+    engine._finalized = True
 
     if not getattr(engine, "_events_finalized", False):
+        engine._events_finalized = True
         rows = [_serialize_event(ev, engine) for ev in engine.event_log()]
         sink = persist("events", rows)
         st.session_state.data_sink = sink
-        engine._events_finalized = True
 
     if engine.scenario.is_familiarization:
-        engine._finalized = True
         return
 
     if not getattr(engine, "_summary_finalized", False):
+        engine._summary_finalized = True
         import dataclasses
         summary = dataclasses.asdict(engine.result())
         # Surface the exact actions that triggered wrong-mode counts so the
@@ -394,9 +415,6 @@ def _finalize_trial(engine: TrialEngine) -> None:
         # Persist the row to the canonical 'summaries' sheet immediately —
         # this is the durable record, independent of session_state survival.
         st.session_state.summary_sink = persist("summaries", [_summary_for_sheet(summary)])
-        engine._summary_finalized = True
-
-    engine._finalized = True
 
 
 def _remember_summary(summary: Dict[str, Any]) -> None:
