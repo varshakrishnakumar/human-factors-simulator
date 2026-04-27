@@ -382,22 +382,8 @@ def _finalize_trial(engine: TrialEngine) -> None:
     the subject ever opens the survey, and one row per session for workload."""
     if getattr(engine, "_finalized", False):
         return
-    # Latch before any network I/O. Streamlit can overlap reruns during a slow
-    # Sheets append; setting this after persist() leaves a window where the same
-    # finished engine can append the same summary twice.
-    engine._finalized = True
 
-    if not getattr(engine, "_events_finalized", False):
-        engine._events_finalized = True
-        rows = [_serialize_event(ev, engine) for ev in engine.event_log()]
-        sink = persist("events", rows)
-        st.session_state.data_sink = sink
-
-    if engine.scenario.is_familiarization:
-        return
-
-    if not getattr(engine, "_summary_finalized", False):
-        engine._summary_finalized = True
+    if not engine.scenario.is_familiarization and not getattr(engine, "_summary_finalized", False):
         import dataclasses
         summary = dataclasses.asdict(engine.result())
         # Surface the exact actions that triggered wrong-mode counts so the
@@ -412,9 +398,35 @@ def _finalize_trial(engine: TrialEngine) -> None:
             if ev.action == "ORDER ERROR" and ev.extra.get("attempted")
         ]
         _remember_summary(summary)
-        # Persist the row to the canonical 'summaries' sheet immediately —
-        # this is the durable record, independent of session_state survival.
-        st.session_state.summary_sink = persist("summaries", [_summary_for_sheet(summary)])
+        # Latch before the Sheets call. Streamlit can overlap reruns during a
+        # slow append; the in-memory summary is already captured, so a second
+        # run should not append the same row again.
+        engine._summary_finalized = True
+        st.session_state.summary_sink = _safe_persist(
+            "summaries",
+            [_summary_for_sheet(summary)],
+        )
+
+    if not getattr(engine, "_events_finalized", False):
+        engine._events_finalized = True
+        rows = [_serialize_event(ev, engine) for ev in engine.event_log()]
+        sink = _safe_persist("events", rows)
+        st.session_state.data_sink = sink
+
+    engine._finalized = True
+
+
+def _safe_persist(name: str, rows: List[Dict[str, Any]]) -> str:
+    """Persist one table without letting it block the rest of finalization."""
+    try:
+        return persist(name, rows)
+    except Exception as exc:
+        try:
+            warnings = st.session_state.setdefault("_persist_errors", [])
+            warnings.append({"name": name, "rows": len(rows), "error": repr(exc)})
+        except Exception:
+            pass
+        return f"error:{type(exc).__name__}"
 
 
 def _remember_summary(summary: Dict[str, Any]) -> None:
