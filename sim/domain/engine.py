@@ -376,6 +376,13 @@ class TrialEngine:
         self._log("TRIAL FINISH", {
             "end_reason": reason,
             "completion_time": round(self.completion_time, 3),
+            "completed": reason == "completed",
+            "timed_out": reason == "timeout",
+            "wrong_mode_actions": self.wrong_mode_actions,
+            "order_errors": self.order_errors,
+            "branch_decision_errors": self.branch_decision_errors,
+            "checklist_selection_error": int(self.checklist_selection_error),
+            "selected_checklist_id": self.selected_checklist_id,
         }, now=now)
 
     # ----- Result -----------------------------------------------------

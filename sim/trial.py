@@ -347,8 +347,9 @@ def maybe_auto_transition() -> None:
 
 def _finalize_trial(engine: TrialEngine) -> None:
     """Persist events + summary once per finished engine. Idempotent:
-    guarded by `engine._finalized` so repeat calls (from maybe_auto_transition
-    on subsequent reruns while the engine is still the current one) are no-ops.
+    guarded by per-table flags so repeat calls (from maybe_auto_transition on
+    subsequent reruns while the engine is still the current one) are no-ops
+    after each table has been written.
 
     Each real trial's summary is written DIRECTLY to the 'summaries' sheet on
     finish — no in-memory buffering until the survey submits. The previous
@@ -364,11 +365,18 @@ def _finalize_trial(engine: TrialEngine) -> None:
     the subject ever opens the survey, and one row per session for workload."""
     if getattr(engine, "_finalized", False):
         return
-    engine._finalized = True  # set BEFORE persist so a crash-and-retry doesn't double-write
-    rows = [_serialize_event(ev, engine) for ev in engine.event_log()]
-    sink = persist("events", rows)
-    st.session_state.data_sink = sink
-    if not engine.scenario.is_familiarization:
+
+    if not getattr(engine, "_events_finalized", False):
+        rows = [_serialize_event(ev, engine) for ev in engine.event_log()]
+        sink = persist("events", rows)
+        st.session_state.data_sink = sink
+        engine._events_finalized = True
+
+    if engine.scenario.is_familiarization:
+        engine._finalized = True
+        return
+
+    if not getattr(engine, "_summary_finalized", False):
         import dataclasses
         summary = dataclasses.asdict(engine.result())
         # Surface the exact actions that triggered wrong-mode counts so the
@@ -382,20 +390,37 @@ def _finalize_trial(engine: TrialEngine) -> None:
             ev.extra.get("attempted") for ev in engine.event_log()
             if ev.action == "ORDER ERROR" and ev.extra.get("attempted")
         ]
+        _remember_summary(summary)
         # Persist the row to the canonical 'summaries' sheet immediately —
         # this is the durable record, independent of session_state survival.
-        persist("summaries", [_summary_for_sheet(summary)])
-        # Append to the in-memory list too so the end-of-session screen can
-        # still show per-trial cards. If session_state drops the list (the
-        # bug we're working around), the sheet is still complete; only the
-        # screen will be incomplete.
-        st.session_state.all_summaries.append(summary)
-        # Belt-and-braces fallback for the summary screen: also stash each
-        # summary under its own per-trial scalar key. Streamlit's session_state
-        # has been observed to occasionally reset list-typed values back to
-        # their dataclass default ([]) between trials, but per-key scalars
-        # survive. summary.py reads from both sources and merges.
-        st.session_state[f"summary_trial_{engine.context.trial_number}"] = summary
+        st.session_state.summary_sink = persist("summaries", [_summary_for_sheet(summary)])
+        engine._summary_finalized = True
+
+    engine._finalized = True
+
+
+def _remember_summary(summary: Dict[str, Any]) -> None:
+    """Keep an in-session copy for the final summary screen.
+
+    Streamlit has occasionally reset list-typed session_state fields between
+    trials, so each trial also gets its own scalar key. The list is rebuilt or
+    repaired opportunistically here instead of assuming it is always present.
+    """
+    trial_number = summary.get("trial_number")
+    if trial_number is not None:
+        st.session_state[f"summary_trial_{trial_number}"] = summary
+
+    summaries = st.session_state.get("all_summaries")
+    if not isinstance(summaries, list):
+        summaries = []
+        st.session_state["all_summaries"] = summaries
+
+    for i, existing in enumerate(summaries):
+        if isinstance(existing, dict) and existing.get("trial_number") == trial_number:
+            summaries[i] = summary
+            break
+    else:
+        summaries.append(summary)
 
 
 def _serialize_event(ev: TrialEvent, engine: TrialEngine) -> Dict[str, Any]:

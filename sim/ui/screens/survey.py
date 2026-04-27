@@ -1,8 +1,8 @@
 """NASA-TLX workload survey screen shown after all trials finish. Iterates over
 the QUESTIONS constant from domain/survey.py so adding a new subscale is a
 domain-data change, not a UI change. Comment boxes follow each slider; the
-submit button calls trial.submit_session_survey() which merges ratings with
-trial summaries and persists them."""
+submit button calls trial.submit_session_survey() to persist the session-level
+workload row."""
 import streamlit as st
 
 from sim.domain.survey import QUESTIONS
@@ -57,7 +57,7 @@ def render() -> None:
     render_section_header("Workload Survey", "One-time survey covering the whole session")
     render_notice(
         "Reflect on the whole session. The scales are from the NASA Task Load Index "
-        "(NASA-TLX). Every slider runs 1 to 10 — the label under each slider tells you "
+        "(NASA-TLX). Every slider runs 1 to 7 — the label under each slider tells you "
         "what each end of the scale means. Use the comment boxes to add a sentence or "
         "two of context if you'd like — full sentences are welcome.",
         "info",

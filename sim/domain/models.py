@@ -167,8 +167,8 @@ class SurveyQuestion:
     low_anchor: str
     high_anchor: str
     min: int = 1
-    max: int = 10
-    default: int = 5
+    max: int = 7
+    default: int = 4
 
 
 @dataclass
@@ -189,9 +189,8 @@ EndReason = Literal["completed", "timeout", "wrong_branch", "procedure_end", "se
 @dataclass
 class TrialResult:
     """Flat summary row produced by the engine once a trial ends. One row per
-    trial, persisted to the 'summaries' sheet/CSV (merged with NASA-TLX data
-    in submit_session_survey). This is the primary unit of analysis for the
-    data team."""
+    trial, persisted to the 'summaries' sheet/CSV. NASA-TLX workload data is
+    written once per session and joined by session_id during analysis."""
     session_id: str
     participant_id: str
     experience: str

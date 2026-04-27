@@ -100,6 +100,26 @@ def test_end_trial_records_self_terminated(ctx, condition_linear, linear_scenari
     assert result.end_reason == "self_terminated"
 
 
+def test_finish_event_contains_summary_counters(ctx, condition_linear, linear_scenario):
+    """The event sheet should be enough to reconstruct a trial summary if the
+    summaries sheet has a transient write problem."""
+    engine = TrialEngine(linear_scenario, condition_linear, ctx, start_time=0.0)
+    engine.select_linear_checklist(linear_scenario.id, now=0.1)
+    engine.execute_action("B", now=1.0)
+    engine.end_trial(now=2.0)
+
+    finish_event = engine.event_log()[-1]
+    assert finish_event.action == "TRIAL FINISH"
+    assert finish_event.extra["end_reason"] == "self_terminated"
+    assert finish_event.extra["completed"] is False
+    assert finish_event.extra["timed_out"] is False
+    assert finish_event.extra["wrong_mode_actions"] == 1
+    assert finish_event.extra["order_errors"] == 1
+    assert finish_event.extra["branch_decision_errors"] == 0
+    assert finish_event.extra["checklist_selection_error"] == 0
+    assert finish_event.extra["selected_checklist_id"] == linear_scenario.id
+
+
 def test_auto_transition_does_not_refire_after_select_auto_mode(ctx, condition_branching):
     """Regression for the 'two phantom wrong_mode_actions per trial' bug:
     once the auto-transition has fired (mode AUTO -> SAFE/HOLD), tick() must

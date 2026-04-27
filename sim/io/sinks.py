@@ -8,10 +8,27 @@ calls it. That keeps the domain layer clean and testable while still letting the
 live app do real balancing."""
 from typing import Any, Dict, List, Tuple
 
-import pandas as pd
+import csv
+import json
 
 from sim.domain.conditions import balanced_condition as _pure_balanced_condition
 from sim.io._sheets import LOG_DIR, _append_sheet, _get_worksheet
+
+
+def _cell_value(value: Any) -> Any:
+    """Convert nested event extras into a single sheet/CSV cell value."""
+    if value is None:
+        return ""
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    try:
+        return json.dumps(value)
+    except TypeError:
+        return str(value)
+
+
+def _normalise_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return [{k: _cell_value(v) for k, v in row.items()} for row in rows]
 
 
 def _append_local(name: str, rows: List[Dict[str, Any]]) -> str:
@@ -19,9 +36,28 @@ def _append_local(name: str, rows: List[Dict[str, Any]]) -> str:
         return ""
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     path = LOG_DIR / f"{name}.csv"
-    df = pd.DataFrame(rows)
-    header = not path.exists()
-    df.to_csv(path, mode="a", index=False, header=header)
+
+    existing_headers: List[str] = []
+    existing_rows: List[Dict[str, Any]] = []
+    if path.exists() and path.stat().st_size > 0:
+        with path.open("r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            existing_headers = list(reader.fieldnames or [])
+            existing_rows = list(reader)
+
+    headers = existing_headers[:]
+    for row in rows:
+        for key in row:
+            if key not in headers:
+                headers.append(key)
+
+    mode = "a" if existing_headers == headers and existing_headers else "w"
+    with path.open(mode, newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=headers, extrasaction="ignore")
+        if mode == "w":
+            writer.writeheader()
+            writer.writerows(existing_rows)
+        writer.writerows(rows)
     return str(path)
 
 
@@ -29,9 +65,10 @@ def persist(name: str, rows: List[Dict[str, Any]]) -> str:
     """Append rows to the named sheet/CSV. Returns 'google_sheets' or the local
     file path so the caller can record which backend was used (stored in
     session_state.data_sink for debugging)."""
-    if _append_sheet(name, rows):
+    normalised = _normalise_rows(rows)
+    if _append_sheet(name, normalised):
         return "google_sheets"
-    return _append_local(name, rows)
+    return _append_local(name, normalised)
 
 
 def record_assignment(assignment: Dict[str, Any]) -> str:

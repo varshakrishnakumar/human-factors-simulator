@@ -7,7 +7,10 @@ causing sinks.py to fall back to CSV automatically."""
 from pathlib import Path
 from typing import Any, Dict, List
 
-import streamlit as st
+try:
+    import streamlit as st
+except Exception:
+    st = None
 
 try:
     import gspread
@@ -26,7 +29,7 @@ GOOGLE_SCOPES = [
 
 
 def _get_sheet_client():
-    if gspread is None or Credentials is None:
+    if st is None or gspread is None or Credentials is None:
         return None
     try:
         has_secret = "gcp_service_account" in st.secrets
@@ -43,7 +46,14 @@ def _get_sheet_client():
         return None
 
 
-@st.cache_resource(show_spinner=False)
+if st is not None:
+    _cache_resource = st.cache_resource(show_spinner=False)
+else:
+    def _cache_resource(func):
+        return func
+
+
+@_cache_resource
 def _get_spreadsheet():
     client = _get_sheet_client()
     if client is None:
