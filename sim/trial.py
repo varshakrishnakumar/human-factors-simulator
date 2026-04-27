@@ -25,7 +25,8 @@ from sim.domain.conditions import CONDITIONS, FAMILIARIZATION_TIME_LIMIT, NUM_RE
 from sim.domain.engine import TrialEngine
 from sim.domain.models import Condition, LinearChecklist, Scenario, TriggerCue, TrialContext, TrialEvent, TrialResult
 from sim.domain.scenarios.registry import get_all as _get_scenarios, get_by_id, get_familiarization
-from sim.io.sinks import persist, record_assignment
+from sim.domain.survey import COMMENT_KEYS, QUESTIONS
+from sim.io.sinks import persist, record_assignment, update_rows
 try:
     from sim.state import reset_trial_state
 except ModuleNotFoundError as exc:
@@ -36,6 +37,7 @@ except ModuleNotFoundError as exc:
         st.session_state["trial_engine"] = None
 
 _ENGINE_KEY = "trial_engine"
+_WORKLOAD_KEYS: Tuple[str, ...] = tuple(q.key for q in QUESTIONS) + COMMENT_KEYS
 
 
 # ----- Engine load/save --------------------------------------------
@@ -429,6 +431,18 @@ def _safe_persist(name: str, rows: List[Dict[str, Any]]) -> str:
         return f"error:{type(exc).__name__}"
 
 
+def _safe_update_rows(name: str, match: Dict[str, Any], updates: Dict[str, Any]) -> str:
+    try:
+        return update_rows(name, match, updates)
+    except Exception as exc:
+        try:
+            warnings = st.session_state.setdefault("_persist_errors", [])
+            warnings.append({"name": name, "rows": 0, "error": repr(exc)})
+        except Exception:
+            pass
+        return f"error:{type(exc).__name__}"
+
+
 def _remember_summary(summary: Dict[str, Any]) -> None:
     """Keep an in-session copy for the final summary screen.
 
@@ -481,6 +495,8 @@ def _summary_for_sheet(summary: Dict[str, Any]) -> Dict[str, Any]:
             out[k] = "; ".join(str(x) for x in v if x is not None)
         else:
             out[k] = v
+    for key in _WORKLOAD_KEYS:
+        out.setdefault(key, "")
     return out
 
 
@@ -505,5 +521,12 @@ def submit_session_survey(payload: Dict[str, Any]) -> None:
         "condition": condition_key,
     }
     workload_row.update(payload)
-    persist("session_workload", [workload_row])
+    st.session_state.workload_sink = _safe_persist("session_workload", [workload_row])
+    workload_updates = {key: payload.get(key, "") for key in _WORKLOAD_KEYS}
+    if session_id:
+        st.session_state.summary_workload_sink = _safe_update_rows(
+            "summaries",
+            {"session_id": session_id},
+            workload_updates,
+        )
     st.session_state.session_survey_submitted = True

@@ -12,7 +12,7 @@ import csv
 import json
 
 from sim.domain.conditions import balanced_condition as _pure_balanced_condition
-from sim.io._sheets import LOG_DIR, _append_sheet, _get_worksheet
+from sim.io._sheets import LOG_DIR, _append_sheet, _get_worksheet, _update_sheet_rows
 
 
 def _cell_value(value: Any) -> Any:
@@ -29,6 +29,10 @@ def _cell_value(value: Any) -> Any:
 
 def _normalise_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return [{k: _cell_value(v) for k, v in row.items()} for row in rows]
+
+
+def _normalise_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: _cell_value(v) for k, v in row.items()}
 
 
 def _append_local(name: str, rows: List[Dict[str, Any]]) -> str:
@@ -61,6 +65,32 @@ def _append_local(name: str, rows: List[Dict[str, Any]]) -> str:
     return str(path)
 
 
+def _update_local(name: str, match: Dict[str, Any], updates: Dict[str, Any]) -> str:
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    path = LOG_DIR / f"{name}.csv"
+    if not path.exists() or path.stat().st_size == 0:
+        return ""
+
+    with path.open("r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        headers = list(reader.fieldnames or [])
+        rows = list(reader)
+
+    for key in list(match.keys()) + list(updates.keys()):
+        if key not in headers:
+            headers.append(key)
+
+    for row in rows:
+        if all(str(row.get(key, "")) == str(value) for key, value in match.items()):
+            row.update(updates)
+
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=headers, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+    return str(path)
+
+
 def persist(name: str, rows: List[Dict[str, Any]]) -> str:
     """Append rows to the named sheet/CSV. Returns 'google_sheets' or the local
     file path so the caller can record which backend was used (stored in
@@ -69,6 +99,19 @@ def persist(name: str, rows: List[Dict[str, Any]]) -> str:
     if _append_sheet(name, normalised):
         return "google_sheets"
     return _append_local(name, normalised)
+
+
+def update_rows(name: str, match: Dict[str, Any], updates: Dict[str, Any]) -> str:
+    """Update existing rows in a named sheet/CSV.
+
+    Returns 'google_sheets' when the remote worksheet was updated, otherwise
+    the local CSV path if the fallback file existed and was rewritten.
+    """
+    normalised_match = _normalise_row(match)
+    normalised_updates = _normalise_row(updates)
+    if _update_sheet_rows(name, normalised_match, normalised_updates):
+        return "google_sheets"
+    return _update_local(name, normalised_match, normalised_updates)
 
 
 def record_assignment(assignment: Dict[str, Any]) -> str:

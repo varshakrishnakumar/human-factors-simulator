@@ -116,3 +116,45 @@ def _append_sheet(name: str, rows: List[Dict[str, Any]]) -> bool:
         return True
     except Exception:
         return False
+
+
+def _update_sheet_rows(name: str, match: Dict[str, Any], updates: Dict[str, Any]) -> bool:
+    """Update existing worksheet rows matching `match` with `updates`.
+
+    Used for session-level data (NASA-TLX) that is collected after per-trial
+    summary rows have already been appended.
+    """
+    if not match or not updates:
+        return False
+    ws = _get_worksheet(name)
+    if ws is None:
+        return False
+    try:
+        values = ws.get_all_values()
+        if not values:
+            return False
+
+        headers = list(values[0])
+        changed_headers = False
+        for key in list(match.keys()) + list(updates.keys()):
+            if key not in headers:
+                headers.append(key)
+                changed_headers = True
+        if changed_headers:
+            ws.update([headers], "A1")
+
+        match_cols = {key: headers.index(key) for key in match}
+        update_cols = {key: headers.index(key) for key in updates}
+        matched_rows: List[int] = []
+
+        for row_number, row in enumerate(values[1:], start=2):
+            padded = row + [""] * (len(headers) - len(row))
+            if all(str(padded[match_cols[key]]) == str(value) for key, value in match.items()):
+                matched_rows.append(row_number)
+
+        for row_number in matched_rows:
+            for key, value in updates.items():
+                ws.update_cell(row_number, update_cols[key] + 1, value)
+        return bool(matched_rows)
+    except Exception:
+        return False
