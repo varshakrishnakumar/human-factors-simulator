@@ -22,7 +22,8 @@ def render() -> None:
 
         <h3>How the session is structured</h3>
         <ol>
-          <li><strong>Practice trial (Trial 0).</strong> One-button warm-up. No timer, no scoring.</li>
+          <li><strong>Sandbox trial (Trial 0).</strong> Four-step example checklist.
+          No timer, no scoring, and no real-trial summary row.</li>
           <li><strong>Three recovery trials.</strong> Each trial injects one fault. A
           sticky timer at the top of the page shows how long you have.
           Trials end automatically when you reach the desired end state <em>or</em> when

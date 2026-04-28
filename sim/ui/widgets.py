@@ -40,11 +40,13 @@ _CUE_WARN_VALUES = {
 }
 _CUE_OK_VALUES = {
     "AUTO",
+    "ACKNOWLEDGED",
     "NOMINAL",
     "VALID",
     "STABLE",
     "ACTIVE",
     "OK",
+    "OPEN",
 }
 
 
@@ -173,19 +175,29 @@ def render_rocket_celebration() -> None:
 
 
 def render_practice_checklist(scenario) -> None:
-    """One-step practice checklist shown during familiarization, regardless of
-    the participant's assigned condition. Reads the Scenario dataclass directly."""
+    """Sandbox checklist shown during familiarization, regardless of condition."""
     from sim.trial import completed_actions
-    render_section_header("Practice", "Warm up before the real trials")
+    render_section_header("Sandbox", "Practice the console/checklist loop")
     render_notice(
-        "This is a practice run. There is one step: click ACK PRACTICE ALERT on the "
-        "console to acknowledge. No timer, no scoring.",
+        "Trial 0 is a sandbox. Follow the example checklist by pressing the matching "
+        "console buttons. No timer, no scoring, and no real-trial summary row.",
         "info",
     )
-    step = scenario.linear_checklist.steps[0]
-    done = step in completed_actions()
-    css = "hf-step-done" if done else "hf-step-current"
-    st.markdown(
-        f'<div class="{css}">STEP 01 // {esc(step)}</div>',
-        unsafe_allow_html=True,
-    )
+    done = completed_actions()
+    expected_step = next((s for s in scenario.linear_checklist.steps if s not in done), None)
+    for i, step in enumerate(scenario.linear_checklist.steps, start=1):
+        if step in done:
+            css = "hf-step-done"
+        elif step == expected_step:
+            css = "hf-step-current"
+        else:
+            css = "hf-step-upcoming"
+        expected_mode = scenario.action_expected_modes.get(step)
+        mode_html = (
+            f'<span class="hf-step-mode">Mode {esc(expected_mode)}</span>'
+            if expected_mode else ""
+        )
+        st.markdown(
+            f'<div class="{css}">STEP {i:02d} // {esc(step)}{mode_html}</div>',
+            unsafe_allow_html=True,
+        )

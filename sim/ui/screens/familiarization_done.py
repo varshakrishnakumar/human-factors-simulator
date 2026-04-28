@@ -1,4 +1,4 @@
-"""Transition screen shown after the practice trial finishes. Gives the subject
+"""Transition screen shown after the sandbox trial finishes. Gives the subject
 a moment to read the success message before they manually click through to
 Trial 1 — unlike real trials, the advance here is not automatic."""
 import streamlit as st
@@ -9,7 +9,7 @@ from sim.ui.widgets import render_notice
 
 def render() -> None:
     render_notice(
-        "Practice complete. The real trials each have a time limit — click Start "
+        "Sandbox complete. The real trials each have a time limit — click Start "
         "Trial 1 when you're ready to begin.",
         "success",
     )

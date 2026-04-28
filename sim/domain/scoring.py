@@ -28,7 +28,8 @@ def classify_end(engine: "TrialEngine", now: float) -> Optional[EndReason]:
         return "timeout"
 
     if scenario.is_familiarization:
-        if "ACK PRACTICE ALERT" in engine.completed_actions:
+        steps = scenario.linear_checklist.steps
+        if steps and all(step in engine.completed_actions for step in steps):
             return "completed"
         return None
 

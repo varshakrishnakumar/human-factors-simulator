@@ -196,8 +196,8 @@ class TrialEngine:
             self._finish(reason, now)
 
     def execute_action(self, action: str, now: float) -> None:
-        """Record a console button press: update wrong_mode_actions and
-        order_errors counters, advance the branching cursor if applicable,
+        """Record a console button press: update real-trial wrong_mode_actions
+        and order_errors counters, advance the branching cursor if applicable,
         append to completed_actions (deduped), and handle the SELECT AUTO MODE
         special case. Checks for trial completion after every mutation.
 
@@ -223,7 +223,11 @@ class TrialEngine:
         prev_mode = self.mode
 
         expected_mode = self._action_expected_mode(action)
-        wrong_mode = bool(expected_mode and self.mode != expected_mode)
+        wrong_mode = bool(
+            expected_mode
+            and self.mode != expected_mode
+            and not self.scenario.is_familiarization
+        )
         if wrong_mode:
             self.wrong_mode_actions += 1
 

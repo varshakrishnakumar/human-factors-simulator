@@ -18,8 +18,10 @@ def test_get_by_id_round_trips():
 
 
 def test_get_familiarization():
-    assert registry.get_familiarization().is_familiarization is True
-    assert registry.get_familiarization().id == 0
+    scenario = registry.get_familiarization()
+    assert scenario.is_familiarization is True
+    assert scenario.id == 0
+    assert len(scenario.linear_checklist.steps) == 4
 
 
 def test_linear_candidates_match_real_scenarios():

@@ -32,7 +32,9 @@ def _run_to_completion(scenario, condition):
     engine = TrialEngine(scenario, condition, ctx, start_time=0.0)
     now = 1.0
     if scenario.is_familiarization:
-        engine.execute_action("ACK PRACTICE ALERT", now=now)
+        for step in scenario.linear_checklist.steps:
+            now += 1.0
+            engine.execute_action(step, now=now)
         return engine
 
     if condition.checklist_type == "linear":

@@ -10,6 +10,20 @@ def test_familiarization_completes_on_practice_action(ctx, condition_linear, fam
     assert engine.end_reason() == "completed"
 
 
+def test_familiarization_requires_all_sandbox_steps(ctx, condition_linear):
+    from sim.domain.scenarios.registry import get_familiarization
+
+    scenario = get_familiarization()
+    engine = TrialEngine(scenario, condition_linear, ctx, start_time=0.0)
+    for i, step in enumerate(scenario.linear_checklist.steps[:-1], start=1):
+        engine.execute_action(step, now=float(i))
+        assert not engine.is_finished()
+
+    engine.execute_action(scenario.linear_checklist.steps[-1], now=10.0)
+    assert engine.is_finished()
+    assert engine.end_reason() == "completed"
+
+
 def test_linear_correct_order(ctx, condition_linear, linear_scenario):
     engine = TrialEngine(linear_scenario, condition_linear, ctx, start_time=0.0)
     engine.select_linear_checklist(linear_scenario.id, now=0.1)

@@ -14,7 +14,7 @@ def render() -> None:
         return
     if in_familiarization():
         timer_html = ('<div class="hf-statusbar-cell"><div class="hf-statusbar-label">Trial 0</div>'
-                      '<div class="hf-statusbar-value" style="color:var(--hf-green);">Practice · no timer</div></div>')
+                      '<div class="hf-statusbar-value" style="color:var(--hf-green);">Sandbox · no timer</div></div>')
     else:
         rem = int(remaining_time())
         total = max(current_time_limit(), 1)

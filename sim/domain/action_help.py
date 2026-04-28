@@ -21,5 +21,7 @@ ACTION_HELP: Dict[str, str] = {
     "SWITCH TO BACKUP DOWNLINK": "Hand over to the redundant downlink path.",
     "REINITIALIZE RF TRANSCEIVER": "Reinitialize the RF transceiver.",
     "CONFIRM GROUND LINK RESTORED": "Confirm the ground link is active and stable.",
-    "ACK PRACTICE ALERT": "Acknowledge the practice alert to complete the warm-up.",
+    "ACK PRACTICE ALERT": "Acknowledge the sandbox alert and begin the practice sequence.",
+    "OPEN PRACTICE STATUS PANEL": "Open the sandbox status panel so you can see cues change.",
+    "REPORT PRACTICE COMPLETE": "Report that the sandbox procedure is complete.",
 }
